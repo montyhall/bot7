@@ -34,11 +34,6 @@ function scientist:__init(config, objective)
   -------- Generate Candidate Grid
   local grid      = Grids[config.grid.type]()
   self.candidates = grid(config.grid)
-
-  self.candidates[1] = torch.Tensor{0.124, 0.818}
-  self.candidates[2] = torch.Tensor{0.543, 0.152}
-  self.candidates[3] = torch.Tensor{0.962, 0.165}
-
   self.responses  = nil
   self.observed   = nil
 

@@ -2,7 +2,7 @@
 --                                      Preamble
 ------------------------------------------------
 --[[
-Random search scientist class for bot7.
+Random search bot class for bot7.
 
 Authored: 2015-09-18 (jwilson)
 Modified: 2015-09-28
@@ -15,15 +15,15 @@ local Grids = require('bot7.grids')
 ------------------------------------------------
 --                                 random_search
 ------------------------------------------------
-local title  = 'bot7.scientists.random_search'
-local parent = 'bot7.scientists.metascientist'
-local scientist, parent = torch.class(title, parent)
+local title  = 'bot7.bots.random_search'
+local parent = 'bot7.bots.metabot'
+local bot, parent = torch.class(title, parent)
 
-function scientist:__init(config, objective)
+function bot:__init(config, objective)
   parent.__init(self)
 
   -------- Establish settings
-  local config   = scientist:configure(config)
+  local config   = bot:configure(config)
   self.config    = config
   self.objective = objective
 
@@ -41,7 +41,7 @@ function scientist:__init(config, objective)
   self.best['y']  = torch.Tensor(config.yDim):fill(math.huge)
 end
 
-function scientist:configure(config)
+function bot:configure(config)
   local config = config
   if config then
     config = utils.deepcopy(config)
@@ -70,16 +70,16 @@ function scientist:configure(config)
   return config
 end
 
-function scientist:eval()
+function bot:eval()
   -- random search; so, do nothing
 end
 
 ---------------- Nominate a candidate 
-function scientist:nominate()
+function bot:nominate()
   return self.candidates:select(1, self.order[self.nTrials]):resize(1, self.config.xDim)
 end
 
-function scientist:run_trial()
+function bot:run_trial()
   -------- Increment trial counter
   self.nTrials = self.nTrials + 1
   local x = self:nominate()
@@ -87,7 +87,7 @@ function scientist:run_trial()
   return x, y
 end
 
-function scientist:run_experiment()
+function bot:run_experiment()
   local x, y
   for t = 1, self.config.budget do
     -------- Perform a single trial 
@@ -101,7 +101,7 @@ function scientist:run_experiment()
   end
 end
 
-function scientist:update_best(x, y)
+function bot:update_best(x, y)
   if self.best.y:gt(y):all() then
     self.best.t = self.nTrials
     self.best.x = x
@@ -109,7 +109,7 @@ function scientist:update_best(x, y)
   end
 end
 
-function scientist:progress_report(t, x, y)
+function bot:progress_report(t, x, y)
   if t % self.config.msg_freq == 0 then
     local config = self.config
     local msg = string.format('Trial: %d of %d', t, config.budget)

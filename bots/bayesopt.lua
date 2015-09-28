@@ -2,7 +2,7 @@
 --                                      Preamble
 ------------------------------------------------
 --[[
-Bayesian Optimization scientist class for bot7.
+Bayesian Optimization bot class for bot7.
 
 Authored: 2015-09-18 (jwilson)
 Modified: 2015-09-28
@@ -18,15 +18,15 @@ local math   = require('math')
 ------------------------------------------------
 --                                      bayesopt
 ------------------------------------------------
-local title  = 'bot7.scientists.bayesopt'
-local parent = 'bot7.scientists.metascientist'
-local scientist, parent = torch.class(title, parent)
+local title  = 'bot7.bots.bayesopt'
+local parent = 'bot7.bots.metabot'
+local bot, parent = torch.class(title, parent)
 
-function scientist:__init(config, objective)
+function bot:__init(config, objective)
   parent.__init(self)
 
   -------- Establish settings
-  local config   = scientist:configure(config)
+  local config   = bot:configure(config)
   self.config    = config
   self.objective = objective
   self.nTrials   = 0
@@ -47,7 +47,7 @@ function scientist:__init(config, objective)
   self.best['y']  = torch.Tensor(config.yDim):fill(math.huge)
 end
 
-function scientist:configure(config)
+function bot:configure(config)
   local config = config
   if config then
     config = utils.deepcopy(config)
@@ -86,7 +86,7 @@ function scientist:configure(config)
   return config
 end
 
-function scientist:eval(candidates)
+function bot:eval(candidates)
   -------- Local aliases
   local X_obs   = self.observed
   local Y_obs   = self.responses
@@ -111,7 +111,7 @@ function scientist:eval(candidates)
 end
 
 ---------------- Nominate a candidate
-function scientist:nominate(candidates)
+function bot:nominate(candidates)
   local candidates = candidates or self.candidates
   local idx
 
@@ -128,7 +128,7 @@ function scientist:nominate(candidates)
   return idx
 end
 
-function scientist:run_trial()
+function bot:run_trial()
   -------- Increment trial counter
   self.nTrials = self.nTrials + 1
 
@@ -169,7 +169,7 @@ function scientist:run_trial()
   return nominee, y
 end
 
-function scientist:run_experiment()
+function bot:run_experiment()
   local x, y
   for t = 1, self.config.budget do
     -------- Perform a single trial 
@@ -183,7 +183,7 @@ function scientist:run_experiment()
   end
 end
 
-function scientist:update_best(x, y)
+function bot:update_best(x, y)
   if self.best.y:gt(y):all() then
     self.best.t = self.nTrials
     self.best.x = x
@@ -191,7 +191,7 @@ function scientist:update_best(x, y)
   end
 end
 
-function scientist:progress_report(t, x, y)
+function bot:progress_report(t, x, y)
   if t % self.config.msg_freq == 0 then
     local config = self.config
     local msg = string.format('Trial: %d of %d', t, config.budget)

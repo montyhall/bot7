@@ -21,7 +21,7 @@ cmd = torch.CmdLine()
 cmd:text()
 cmd:text('Options:')
 cmd:option('-verbose',   1, 'specify which print level')
-cmd:option('-scientist', 'bo', 'specify which scientist to use: {bo, rs}')
+cmd:option('-bot',       'bo', 'specify which bot to use: {bo, rs}')
 cmd:option('-benchmark', 'braninhoo', 'specify which function to optimize: '..
                                       '{braninhoo, hartmann3, hartmann6}')
 
@@ -31,7 +31,7 @@ cmd:option('-noisy',      false, 'specify observations as noisy')
 cmd:option('-grid_size',  20000, 'specify size of candidate grid')
 cmd:option('-mins', '',   'specify minima for inputs (defaults to 0.0)')
 cmd:option('-maxes',      '', 'specify maxima for inputs (defaults to 1.0)')
-cmd:option('-score',      'ei', 'specify acquisition function to be used by scientist; {ei, ucb}')
+cmd:option('-score',      'ei', 'specify acquisition function to be used by bot; {ei, ucb}')
 
 cmd:text()
 opt = cmd:parse(arg or {})
@@ -39,7 +39,7 @@ opt = cmd:parse(arg or {})
 ---------------- Experiment Configuration
 local expt = 
 {  
-  sci   = opt.scientist,
+  bot   = opt.bot,
   func  = opt.benchmark,
   xDim  = opt.xDim,
   yDim  = opt.yDim,
@@ -91,19 +91,19 @@ function run_benchmark(expt)
   -------- Load benchmark function
   paths.dofile('benchmarks/' .. expt.func .. '.lua')
 
-  -------- Initialize scientist
-  local scientist
-  if expt.sci == 'bo' then
-    scientist = bot7.scientists.bayesopt(expt, _G[expt.func])
-  elseif expt.sci == 'rs' then
-    scientist = bot7.scientists.random_search(expt, _G[expt.func])
+  -------- Initialize bot
+  local bot
+  if expt.bot == 'bo' then
+    bot = bot7.bots.bayesopt(expt, _G[expt.func])
+  elseif expt.bot == 'rs' then
+    bot = bot7.bots.random_search(expt, _G[expt.func])
   else
-    print('Error: Unrecognized scientist specified; aborting...')
+    print('Error: Unrecognized bot specified; aborting...')
     return
   end
 
   -------- Perform experiment
-  scientist:run_experiment()
+  bot:run_experiment()
 end
 
 run_benchmark(expt)

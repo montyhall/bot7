@@ -5,22 +5,23 @@
 Initializer for bot7 package.
 
 Package Listing:
-  -----------------------------------------
-  | Directory  | Content                  |
-  -----------------------------------------
-  |   utils    | Utility methods          |
-  |   models   | Target function models   |
-  |   grids    | Input grids              |
-  |   scores   | Acquisition functions    |
-  |  samplers  | Sampling methods         |
-  | scientists | Experiment runners       |
-  -----------------------------------------
+  ----------------------------------------
+  | Directory  | Content                 |
+  ----------------------------------------
+  |   utils    | Utility methods         |
+  |   models   | Target function models  |
+  |   grids    | Input grids             |
+  |   scores   | Acquisition functions   |
+  |  samplers  | Sampling methods        |
+  |    bots    | Automated expt. runners |
+  ----------------------------------------
 
 To Do:
   - Neural net demos
+  - TPE implementation
 
-Authored: 2015-09-12 (jwilson)
-Modified: 2015-09-27
+Authored: 2015-09-28 (jwilson)
+Modified: 2015-09-28
 --]]
 
 ------------------------------------------------
@@ -40,6 +41,6 @@ require('bot7.models')
 require('bot7.grids')
 require('bot7.scores')
 require('bot7.samplers')
-require('bot7.scientists')
+require('bot7.bots')
 
 return bot7

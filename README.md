@@ -10,7 +10,7 @@ __bot7__ is a framework for Bayesian Optimization implemented in Torch7. For it'
 
 Directory    | Content 
 :-------------:|:----------------------
-scientists | Experiment runners
+bots       | Automated experiment runners
 models     | Target function models
 scores     | Acquisition functions (incl. EI, UCB)
 grids      | Candidate grids
@@ -32,7 +32,7 @@ After installing `bot7`, you can load the package inside Torch via:
 require('bot7');
 th> bot7.
 bot7.grids.       bot7.models.      bot7.samplers.    
-bot7.scientists.  bot7.scores.      bot7.utils.
+bot7.bots.        bot7.scores.      bot7.utils.
 ```
 
 ## Developers' Notes ##

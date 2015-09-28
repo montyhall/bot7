@@ -2,28 +2,28 @@
 --                                      Preamble
 ------------------------------------------------
 --[[
-Abstact base class for bot7 scientists.
+Abstact base class for bot7 bots.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-09-27
+Modified: 2015-09-28
 --]]
 
 ------------------------------------------------
---                                 metascientist
+--                                       metabot
 ------------------------------------------------
-local title     = 'bot7.scientists.metascientist'
-local scientist = torch.class(title)
+local title = 'bot7.bots.metabot'
+local bot   = torch.class(title)
 
-function scientist:__init()
+function bot:__init()
 end
 
-function scientist:__call__()
+function bot:__call__()
 end
 
-function scientist.eval()
+function bot.eval()
   print('Error: eval() method not implemented')
 end
 
-function scientist.nominate()
+function bot.nominate()
   print('Error: nominate() method not implemented')
 end

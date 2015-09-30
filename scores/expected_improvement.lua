@@ -10,7 +10,7 @@ The (optional) 'tradeoff' parameter helps govern
 the balance between exploration and exploitation.
 
 Authored: 2015-09-16 (jwilson)
-Modified: 2015-09-28
+Modified: 2015-10-02
 --]]
 
 ---------------- External Dependencies
@@ -52,7 +52,7 @@ function EI.eval(model, hyp, X_obs, Y_obs, X_hid, X_pend, config)
     local nOP   = nObs + nPend
 
     -------- Generate fantasies and append to _obs tensors
-    local X_obs, Y_obs, Y_pend = X_obs, Y_obs, nilz
+    local X_obs, Y_obs, Y_pend = X_obs, Y_obs, nil
     Y_pend = model:fantasize(config.nFantasies, X_obs, Y_obs, X_pend, hyp)
     X_obs  = X_obs:cat(X_pend, 1)
     Y_obs  = utils.vect(Y_obs):repeatTensor(1, config.nFantasies):cat(Y_pend, 1)
@@ -62,11 +62,11 @@ function EI.eval(model, hyp, X_obs, Y_obs, X_hid, X_pend, config)
   local pred  = model:predict(X_obs, Y_obs, X_hid, hyp, {mean=true, var=true})
   local fmins = Y_obs:min(1)
 
-  return EI.compute(pred.mean, pred.var, fmins, config.tradeoff)
+  return EI.compute(pred.mean, pred.var, fmins, config)
 end
 
 function EI.compute(fval, fvar, fmin, tradeoff)
-  local tradeoff = tradeoff or 0.0
+  local tradeoff = config.tradeoff or 0.0
 
   local sigma = fvar:sqrt()
   local resid = fval:mul(-1.0):add(fmin:expandAs(fval)):add(-tradeoff)

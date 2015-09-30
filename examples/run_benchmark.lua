@@ -5,7 +5,7 @@
 Bayesian Optimization of benchmarking functions.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-09-28
+Modified: 2015-10-02
 --]]
 
 ---------------- External Dependencies
@@ -25,8 +25,9 @@ cmd:option('-bot',       'bo', 'specify which bot to use: {bo, rs}')
 cmd:option('-benchmark', 'braninhoo', 'specify which function to optimize: '..
                                       '{braninhoo, hartmann3, hartmann6}')
 
-cmd:option('-xDim',  -1,  'specify input dimensionality for experiment')
-cmd:option('-yDim',  1,   'specify output dimensionality for experiment')
+cmd:option('-budget',      100,'specify budget (#nominees) for experiment')
+cmd:option('-xDim',       100,'specify input dimensionality for experiment')
+cmd:option('-yDim',       1,'specify output dimensionality for experiment')
 cmd:option('-noisy',      false, 'specify observations as noisy')
 cmd:option('-grid_size',  20000, 'specify size of candidate grid')
 cmd:option('-mins', '',   'specify minima for inputs (defaults to 0.0)')
@@ -39,24 +40,23 @@ opt = cmd:parse(arg or {})
 ---------------- Experiment Configuration
 local expt = 
 {  
-  bot   = opt.bot,
-  func  = opt.benchmark,
-  xDim  = opt.xDim,
-  yDim  = opt.yDim,
-  model = {noiseless = not opt.noisy},
-  grid  = {size = opt.grid_size}
+
+  bot     = opt.bot,
+  func    = opt.benchmark,
+  budget  = opt.budget,
+  xDim    = opt.xDim,
+  yDim    = opt.yDim,
+  model   = {noiseless = not opt.noisy},
+  grid    = {size = opt.grid_size}
 }
 
----- Establish xDim for experiment
+---- Manual override xDim for experiment
 if     (opt.benchmark == 'braninhoo') then
   opt.xDim = 2
 elseif (opt.benchmark == 'hartmann3') then
   opt.xDim = 3
 elseif (opt.benchmark == 'hartmann6') then
   opt.xDim = 6
-else
-  print('Error: Unrecognized benchmark function specified; aborting...')
-  return
 end
 expt.xDim, expt.grid['xDim'] = opt.xDim, opt.xDim
 
@@ -76,10 +76,11 @@ else
 end
 
 ---- Choose acquistion function
+expt['score'] = {}
 if     (opt.score == 'ei') then
-  expt.model['score'] = 'expected_improvement'
+  expt.score['type'] = 'expected_improvement'
 elseif (opt.score == 'ucb') then
-  expt.model['score'] = 'confidence_bound'
+  expt.score['type'] = 'confidence_bound'
 end
 
 

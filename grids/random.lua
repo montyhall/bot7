@@ -5,7 +5,7 @@
 Uniform psuedorandom grid.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-09-27
+Modified: 2015-09-30
 --]]
 
 ------------------------------------------------

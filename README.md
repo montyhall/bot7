@@ -1,6 +1,6 @@
 [![Join the chat at https://gitter.im/torch/torch7](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/j-wilson/bot7?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-__Notice__: At present, `bot7` requires use of updated Torch7 features not yet merged into torch/torch7. For the time being please use: https://github.com/j-wilson/torch7.
+__Notice__: At present, `bot7` requires use of updated Torch7 features not yet merged into torch/torch7. For the time being please use: https://github.com/j-wilson/torch7/tree/dev.
 
 <a name="bot7.intro.dok"/>
 # bot7 #

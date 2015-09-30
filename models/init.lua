@@ -5,7 +5,7 @@
 Initialization file for gpTorch7 models class.
 
 Authored: 2015-09-12 (jwilson)
-Modified: 2015-09-28
+Modified: 2015-10-02
 --]]
 
 ------------------------------------------------
@@ -13,6 +13,8 @@ Modified: 2015-09-28
 ------------------------------------------------
 bot7 = bot7 or {}
 bot7['models'] = require('gp.models')
+include('metamodel.lua')
+include('dngo.lua')
 
 -------- Check for req. methods
 -- local msg

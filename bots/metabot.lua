@@ -5,7 +5,7 @@
 Abstact base class for bot7 bots.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-10-02
+Modified: 2015-10-05
 --]]
 
 ---------------- External Dependencies
@@ -57,10 +57,13 @@ function bot:configure(config)
   config['verbose']  = config.verbose or 3
   config['budget']   = config.budget or 100
   config['msg_freq'] = config.msg_freq or 1
-  config['score']    = config.score or 'expected_improvement'
   config['nInitial'] = config.nInitial or 2
   config['nSamples'] = config.nSamples or 10
   config['save']     = config.save or false
+
+  local score        = config.score or {}
+  score['type']      = score.type or 'expected_improvement'
+  config['score']    = score
 
   -------- Grid
   local grid     = config.grid or {}

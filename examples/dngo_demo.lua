@@ -10,7 +10,7 @@ Neural Networks" (Snoek et. al 2015)
 
 
 Authored: 2015-09-30 (jwilson)
-Modified: 2015-10-02
+Modified: 2015-10-05
 --]]
 
 ---------------- External Dependencies
@@ -31,7 +31,7 @@ cmd:option('-bot',       'bo', 'specify which bot to use: {bo, rs}')
 cmd:option('-benchmark', 'hartmann6', 'specify which function to optimize')
 cmd:option('-msg_freq',  1, 'interval between progress reports (in terms of epochs)')
 
-cmd:option('-budget',    100, 'number of candidate nominations (queries)')
+cmd:option('-budget',    300, 'number of candidate nominations (queries)')
 cmd:option('-nTrain',    0, 'number of training instances to pass to network')
 cmd:option('-nTest',     0, 'number of test instances to pass to network')
 cmd:option('-nValid',    0, 'number of validation instances to pass to network')

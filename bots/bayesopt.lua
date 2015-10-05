@@ -5,7 +5,7 @@
 Bayesian Optimization bot class for bot7.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-10-02
+Modified: 2015-10-05
 --]]
 
 ---------------- External Dependencies
@@ -47,7 +47,8 @@ function bot:configure(config)
 
   -------- Score
   local score      = config.score or {}
-  score['type']    = 'expected_improvement'
+  print(score)
+  score['type']    = score.type or 'expected_improvement'
   config['score']  = score
 
   return config

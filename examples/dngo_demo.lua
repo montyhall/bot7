@@ -10,13 +10,14 @@ Neural Networks" (Snoek et. al 2015)
 
 
 Authored: 2015-09-30 (jwilson)
-Modified: 2015-10-05
+Modified: 2015-10-10
 --]]
 
 ---------------- External Dependencies
 local paths = require('paths')
 local bot7  = require('bot7')
 local utils = bot7.utils
+local benchmarks = paths.dofile('benchmarks/init.lua')
 
 ------------------------------------------------
 --                                Initialization
@@ -114,11 +115,9 @@ expt['init']              = init
 ------------------------------------------------
 
 function synthesize()
-  ---- Load benchmark function
-  paths.dofile('benchmarks/' .. expt.func .. '.lua')
 
   local config = utils.deepcopy(expt.grid)
-  local func   = _G[expt.func]
+  local func   = benchmarks[expt.func]
   local grid   = bot7.grids[config.type]()
   local data   = {}
 
@@ -180,8 +179,8 @@ data    = synthesize()
 -- print(string.format('bayesNN loss: %.2e',loss))
 
 model = bot7.models.dngo(expt)
-bot   = bot7.bots.bayesopt(expt, _G[expt.func], {model=model})
--- bot = bot7.bots.bayesopt(expt, _G[expt.func], {model=model, observed=data.xr, responses=data.yr})
+bot   = bot7.bots.bayesopt(expt, benchmarks[expt.func], {model=model})
+-- bot = bot7.bots.bayesopt(expt, benchmarks[expt.func], {model=model, observed=data.xr, responses=data.yr})
 bot:run_experiment()
 
 

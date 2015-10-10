@@ -53,7 +53,7 @@ local hartmann6 = function(X)
   end
   assert(X:size(2) == 6)
 
-  -------- Compute Hartmann3 Function
+  -------- Compute Hartmann6 Function
   local N, xDim = X:size(1), X:size(2)
   local Y = torch.Tensor(N, 1)
   for n = 1,N do 
@@ -62,5 +62,4 @@ local hartmann6 = function(X)
   return Y
 end
 
-return
-
+return hartmann6

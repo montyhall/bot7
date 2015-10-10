@@ -41,11 +41,10 @@ local griewank = function(X)
   local zDim  = Z:size(2)
   local denom = torch.ones(1, zDim):cdiv(torch.range(1, zDim):sqrt())
 
-  -------- Compute Ackley Function
+  -------- Compute Griewank Function
   local Y = Z:clone():pow(2):mean(2):mul(a):add(b)
              :add(-Z:cmul(denom:expandAs(Z)):cos():prod(2))
   return Y
 end
 
 return griewank
-

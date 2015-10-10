@@ -51,4 +51,3 @@ local camel_hump3 = function(X)
 end
 
 return camel_hump3
-

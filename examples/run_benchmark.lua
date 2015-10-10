@@ -26,7 +26,8 @@ cmd:option('-bot',       'bo', 'specify which bot to use: {bo, rs}')
 cmd:option('-benchmark', 'braninhoo', 'specify which function to optimize: '..
                                       '{braninhoo, hartmann3, hartmann6}')
 
-cmd:option('-budget',      100,'specify budget (#nominees) for experiment')
+cmd:option('-nInitial',   2, 'specify number of initial candidates to sample at random')
+cmd:option('-budget',     100,'specify budget (#nominees) for experiment')
 cmd:option('-xDim',       100,'specify input dimensionality for experiment')
 cmd:option('-yDim',       1,'specify output dimensionality for experiment')
 cmd:option('-noisy',      false, 'specify observations as noisy')
@@ -42,13 +43,14 @@ opt = cmd:parse(arg or {})
 local expt = 
 {  
 
-  bot     = opt.bot,
-  func    = opt.benchmark,
-  budget  = opt.budget,
-  xDim    = opt.xDim,
-  yDim    = opt.yDim,
-  model   = {noiseless = not opt.noisy},
-  grid    = {size = opt.grid_size}
+  bot      = opt.bot,
+  func     = opt.benchmark,
+  nInitial = opt.nInitial,
+  budget   = opt.budget,
+  xDim     = opt.xDim,
+  yDim     = opt.yDim,
+  model    = {noiseless = not opt.noisy},
+  grid     = {size = opt.grid_size}
 }
 
 ---- Manual override xDim for experiment

@@ -2,8 +2,8 @@
 --                                      Preamble
 ------------------------------------------------
 --[[
-Rosenbrock Valley n-dimensional benchmarking 
-function:
+(Rescaled) Rosenbrock Valley n-dimensional
+benchmarking function:
 
   f(x) = sum_{i=[1, n-1]}[a*(z_i^2 - z_{i+1})^2 + (z_i + b)^2]
 
@@ -24,9 +24,6 @@ Authored: 2015-09-18 (jwilson)
 Modified: 2015-10-10
 --]]
 
----------------- External Dependencies
-math = require('math')
-
 ---------------- Constants
 local a = 100
 local b = -1.0
@@ -41,19 +38,10 @@ local rosenbrock = function(X)
   if (Z:dim() == 1 or Z:size(1) == Z:nElement()) then
     Z:resize(1, Z:nElement())
   end
-  -------- Compute Rosenbrock Valley Function (rescaled)
+  -------- Compute Rosenbrock Valley Function (Rescaled)
   local Y = torch.add(torch.pow(Z:narrow(2,1,3), 2), -Z:narrow(2,2,3)):pow(2):mul(a)
                  :add(torch.add(Z:narrow(2,1,3), b):pow(2)):sum(2)
   return Y
 end
 
 return rosenbrock
-
--------- Expanded Version 
--- local Y = torch.zeros(X:size(1),1)
--- for idx = 1,3 do
---   Y:add((Z:select(2,idx+1):clone() - Z:select(2,idx):clone():pow(2)):pow(2):mul(100)
---           :add(Z:select(2,idx):clone():mul(-1):add(1):pow(2)))
--- end
--- Y:add(c2):mul(c1)
-

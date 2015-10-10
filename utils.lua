@@ -5,7 +5,7 @@
 Utility methods for bot7.
 
 Authored: 2015-09-12 (jwilson)
-Modified: 2015-10-02
+Modified: 2015-10-10
 --]]
 
 ---------------- External Dependencies
@@ -174,6 +174,15 @@ function utils.kron(X, Z, buffer)
   end
   return K
 end
+
+--------------------------------
+--               Modulo Operator
+--------------------------------
+function utils.modulus(val, base)
+  local typ = val:type()
+  return torch.add(val:double(), -base, torch.floor(torch.mul(val:double(), 1/base))):type(typ)
+end
+
 
 --------------------------------
 --              Tensor Transpose
@@ -347,6 +356,8 @@ end
 --           Tensor NaN Operator
 --------------------------------
 function utils.nanop(op, tnsr, axis, res)
+  local axis = axis or 0
+  
   -------- Special Case: Operate over all axis
   if axis == 0 then
     tnsr = tnsr:clone():resize(tnsr:nElement())
@@ -445,43 +456,43 @@ end
 --------------------------------
 --           Standard Normal PDF
 --------------------------------
-function utils.standard_pdf(x)
-  return torch.exp(x:clone():pow(2):mul(-0.5)):mul(sqrt2pi_inv)
+function utils.norm_pdf(x)
+  return torch.exp(torch.pow(x, 2):mul(-0.5)):mul(sqrt2pi_inv)
 end
 
 --------------------------------
 --           Standard Normal CDF
 --------------------------------
-function utils.standard_cdf(x)
-  return utils.erf(x:clone():mul(sqrt2_inv)):add(1):mul(0.5)
+function utils.norm_cdf(x)
+  return utils.erf(torch.mul(x, sqrt2_inv)):add(1):mul(0.5)
 end
 
 --------------------------------
 --       Standard Normal Log-PDF
 --------------------------------
-function utils.standard_logpdf(x)
-  return x:clone():pow(2):add(log2pi):mul(-0.5)
+function utils.norm_logpdf(x)
+  return torch.pow(x, 2):add(log2pi):mul(-0.5)
 end
 
 --------------------------------
 --                Log-Normal PDF
 --------------------------------
 function utils.lognorm_pdf(x)
-  return torch.exp(x:clone():log():pow(2):mul(-0.5)):cdiv(x):mul(sqrt2pi_inv)
+  return torch.exp(torch.log(x):pow(2):mul(-0.5)):cdiv(x):mul(sqrt2pi_inv)
 end
 
 --------------------------------
 --                Log-Normal CDF
 --------------------------------
 function utils.lognorm_cdf(x)
-  return utils.erf(x:clone():log():mul(sqrt2_inv)):mul(0.5):add(0.5)
+  return utils.erf(torch.log(x):mul(sqrt2_inv)):mul(0.5):add(0.5)
 end
 
 --------------------------------
 --            Log-Normal Log-PDF
 --------------------------------
 function utils.lognorm_logpdf(x)
-  return x:clone():log():pow(2):mul(-0.5):add(x:clone():mul(-sqrt2pi_inv))
+  return torch.log(x):pow(2):mul(-0.5):add(x:clone():mul(-sqrt2pi_inv))
 end
 
 return utils

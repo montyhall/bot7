@@ -18,7 +18,7 @@ Expects data to be passed in as:
   ------------------------------
 
 Authored: 2015-09-30 (jwilson)
-Modified: 2015-10-01
+Modified: 2015-10-09
 --]]
 
 ---------------- External Dependencies
@@ -35,7 +35,7 @@ local parent = 'bot7.bots.metabot'
 local bot, parent = torch.class(title, parent)
 
 function bot:__init(config, data)
-  parent.__init(self)
+  parent.__init(self, config)
   self.config = self:configure(config or {}, data)
 end
 
@@ -48,6 +48,8 @@ function bot:__call__(data, model, optimizer, criterion, config)
 end
 
 function bot:configure(config, data)
+  local config = config or {}
+
   ---------------- User Interfacing 
   local UI = config.UI or {}
   UI['verbose']  = UI.verbose or 1
@@ -59,7 +61,7 @@ function bot:configure(config, data)
   local sched = config.schedule or {}
   sched['nEpochs']   = sched.nEpochs or 100
   sched['batchsize'] = sched.batchsize or 32
-  sched['eval_freq'] = sched.eval_freq or 10
+  sched['eval_freq'] = sched.eval_freq or sched.nEpochs
   config['schedule'] = sched
 
   ---------------- Model settings
@@ -75,7 +77,7 @@ function bot:configure(config, data)
   config['model']  = model
 
   ---------------- Optimization Settings
-  local optim      = config.optim or {}
+  local optim                = config.optim or {}
   optim['learningRate']      = optim.learningRate or 1e-2
   optim['learningRateDecay'] = optim.learningRateDecay or 1e-4
   optim['weightDecay']       = optim.weightDecay  or 1e-5
@@ -112,10 +114,11 @@ function bot:build(config)
   return model
 end
 
-function bot:train(data, model, optimizer, criterion, confusion)
+function bot:train(data, model, optimizer, criterion, state)
   local config  = self.config
   local sched   = config.schedule
   local UI      = config.UI
+  local state   = state or {} -- state for optimizer
 
   -------- Shape Information
   local counts = {r=data.xr:size(1), e=0, v=0}
@@ -187,7 +190,7 @@ function bot:train(data, model, optimizer, criterion, confusion)
       nCol = head-tail+1
       inputs:resize(nCol,xDim):copy(data['x'..suffix]:sub(tail, head))
       targets:resize(nCol,yDim):copy(data['y'..suffix]:sub(tail, head))
-      optimizer(closure, W, config.optim)
+      optimizer(closure, W, config.optim, state)
     end
   end
 
@@ -224,7 +227,7 @@ function bot:train(data, model, optimizer, criterion, confusion)
     update('r')
 
     ---- Evaluate model on provided data
-    if epoch % sched.eval_freq then
+    if epoch % sched.eval_freq == 0 then
       local t, idx  = epoch / sched.eval_freq, 2
       trace[{t, 1}] = epoch
       for k = 1, nSets do
@@ -238,5 +241,5 @@ function bot:train(data, model, optimizer, criterion, confusion)
     ---- Report current status to user
     report(epoch)
   end
-  return model
+  return model, trace
 end

@@ -19,7 +19,7 @@ f(x*) = 0.0 at x* = (0.5, 0.5)
 
 
 Authored: 2015-10-02 (jwilson)
-Modified: 2015-10-02
+Modified: 2015-10-10
 --]]
 
 ---------------- External Dependencies
@@ -35,8 +35,7 @@ local scale  = 10
 ------------------------------------------------
 --                                   camel_hump3
 ------------------------------------------------
-
-function camel_hump3(X)
+local camel_hump3 = function(X)
   -------- Transform X -> Z 
   local Z = torch.add(X, offset):mul(scale)
   if (Z:dim() == 1 or Z:size(1) == Z:nElement()) then
@@ -50,4 +49,6 @@ function camel_hump3(X)
                      :cmul(zz1):add(Z:prod(2)):add(zz2)
   return Y
 end
+
+return camel_hump3
 

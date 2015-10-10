@@ -5,12 +5,13 @@
 Bayesian Optimization of benchmarking functions.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-10-02
+Modified: 2015-10-10
 --]]
 
 ---------------- External Dependencies
-paths = require('paths')
-bot7  = require('bot7')
+local paths = require('paths')
+local bot7  = require('bot7')
+local benchmarks = paths.dofile('benchmarks/init.lua')
 
 ------------------------------------------------
 --                                Initialization
@@ -89,15 +90,12 @@ end
 ------------------------------------------------
 function run_benchmark(expt)
 
-  -------- Load benchmark function
-  paths.dofile('benchmarks/' .. expt.func .. '.lua')
-
   -------- Initialize bot
   local bot
   if expt.bot == 'bo' then
-    bot = bot7.bots.bayesopt(expt, _G[expt.func])
+    bot = bot7.bots.bayesopt(expt, benchmarks[expt.func])
   elseif expt.bot == 'rs' then
-    bot = bot7.bots.random_search(expt, _G[expt.func])
+    bot = bot7.bots.random_search(expt, benchmarks[expt.func])
   else
     print('Error: Unrecognized bot specified; aborting...')
     return

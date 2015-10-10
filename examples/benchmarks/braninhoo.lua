@@ -14,7 +14,7 @@ Global Minima:
 (z1, z2) ~= {(-3.142, 12.275), (3.142, 2.275), (9.425, 2.475)} 
   
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-09-24
+Modified: 2015-10-10
 --]]
 
 ---------------- External Dependencies
@@ -27,8 +27,7 @@ local c3 = 10.0 - 10.0/(8.0*math.pi)
 ------------------------------------------------
 --                                     braninhoo
 ------------------------------------------------
-
-function braninhoo(X)
+local braninhoo = function(X)
   if (X:dim() == 1 or X:size(1) == X:nElement()) then
     X = X:resize(1, X:nElement())
   end
@@ -44,3 +43,4 @@ function braninhoo(X)
   return Y
 end
 
+return braninhoo

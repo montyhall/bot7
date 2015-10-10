@@ -18,7 +18,7 @@ f(x*) = 0.0 at x* = (0.5, ..., 0.5)
 
 
 Authored: 2015-10-02 (jwilson)
-Modified: 2015-10-02
+Modified: 2015-10-10
 --]]
 
 ---------------- External Dependencies
@@ -35,8 +35,7 @@ local scale  = 65.536
 ------------------------------------------------
 --                                        ackley
 ------------------------------------------------
-
-function ackley(X)
+local ackley = function(X)
   -------- Transform X -> Z 
   local Z = torch.add(X, offset):mul(scale)
   if (Z:dim() == 1 or Z:size(1) == Z:nElement()) then
@@ -49,3 +48,4 @@ function ackley(X)
   return Y
 end
 
+return ackley

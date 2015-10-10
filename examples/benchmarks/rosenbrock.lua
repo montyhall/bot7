@@ -2,53 +2,52 @@
 --                                      Preamble
 ------------------------------------------------
 --[[
-Rosenbrock Valley 4D benchmarking function (rescaled):
+Rosenbrock Valley n-dimensional benchmarking 
+function:
 
-  f(x) = c1*(sum_{i=[1,3]}[100(z_{i+1} - z_i^2)^2 + (1-z_i)^2] - c2)
+  f(x) = sum_{i=[1, n-1]}[a*(z_i^2 - z_{i+1})^2 + (z_i + b)^2]
 
 where:
- c1  := 3.755e5^(-1)
- c2  := 3.827e5
- z_i := 15x_i - 5 forall i = [1,4]
+ a := 100
+ b := -1.0
+ z := 15*(x - 1/3)
 
-and, domain(x) := [0,1]^4
+and, domain(x) := [0,1]^n
 
 Global Minima:
-f(x*) = 0 at x* := (1, 1, 1, 1)
+f(x*) = 0 at 
+  x* := (0.4, 0.4, 0.4, 0.4)
+  z* := (1.0, 1.0, 1.0, 1.0)
 
   
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-09-25
+Modified: 2015-10-10
 --]]
 
 ---------------- External Dependencies
 math = require('math')
 
 ---------------- Constants
-local c1 = 1.0/3.755e6
-local c2 = -3.827e6
+local a = 100
+local b = -1.0
+local offset = -1/3
+local scale  = 15
 ------------------------------------------------
 --                                    rosenbrock
 ------------------------------------------------
-function rosenbrock(X)
-  if (X:dim() == 1 or X:size(1) == X:nElement()) then
-    X = X:resize(1, X:nElement())
-  end
-  assert(X:size(2) == 4)
-
-  print('Warning: Rosenbrock Valley function may be bugged.'..
-        'At x=(1,1,1,1), function returns -0.3720 instead of 0.0')
-
+local rosenbrock = function(X)
   -------- Transform X -> Z 
-  local Z = torch.mul(X, 15):add(-5)
-
-
-  -------- Compute Rosenbrock Valley Function (rescaled)   
-  local Y = Z:narrow(2,2,3):clone():add(Z:narrow(2,1,3):clone():pow(2):mul(-1)):pow(2):mul(100)
-             :add(Z:narrow(2,1,3):clone():mul(-1):add(1):pow(2)):sum(2):add(c2):mul(c1)
-
+  local Z = torch.add(X, offset):mul(scale)
+  if (Z:dim() == 1 or Z:size(1) == Z:nElement()) then
+    Z:resize(1, Z:nElement())
+  end
+  -------- Compute Rosenbrock Valley Function (rescaled)
+  local Y = torch.add(torch.pow(Z:narrow(2,1,3), 2), -Z:narrow(2,2,3)):pow(2):mul(a)
+                 :add(torch.add(Z:narrow(2,1,3), b):pow(2)):sum(2)
   return Y
 end
+
+return rosenbrock
 
 -------- Expanded Version 
 -- local Y = torch.zeros(X:size(1),1)

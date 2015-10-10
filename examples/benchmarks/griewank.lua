@@ -16,7 +16,7 @@ Global Minima:
 f(x*) = 0.0 at x* = (0.5, ..., 0.5)
 
 Authored: 2015-10-02 (jwilson)
-Modified: 2015-10-02
+Modified: 2015-10-10
 --]]
 
 ---------------- External Dependencies
@@ -31,7 +31,7 @@ local scale  = 1200
 ------------------------------------------------
 --                                      griewank
 ------------------------------------------------
-function griewank(X)
+local griewank = function(X)
   -------- Transform X -> Z 
   local Z = torch.add(X, offset):mul(scale)
   if (Z:dim() == 1 or Z:size(1) == Z:nElement()) then
@@ -46,4 +46,6 @@ function griewank(X)
              :add(-Z:cmul(denom:expandAs(Z)):cos():prod(2))
   return Y
 end
+
+return griewank
 

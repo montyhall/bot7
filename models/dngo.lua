@@ -11,7 +11,7 @@ Target Article:
 Neural Networks" (Snoek et. al 2015)
 
 Authored: 2015-09-30 (jwilson)
-Modified: 2015-10-02
+Modified: 2015-10-05
 --]]
 
 ---------------- External Dependencies
@@ -261,25 +261,5 @@ function dngo:build(X, Y, config)
       network:add(nn.Dropout(rate))
     end
   end
-
-
-  -- -------- Input Layer 
-  -- local model = NN.Sequential()
-  -- model:add(nn.Linear(config.xDim, dims[1]))
-
-  -- -------- Hidden Layers
-  -- for layer = 1, config.nLayers+1 do
-  --   model:add(nn[config.activation[layer]]())
-  --   dropout = config.dropout[layer]
-  --   if dropout > 0 and dropout < 1 then
-  --     model:add(nn.Dropout(dropout))
-  --   end
-  --   model:add(nn.Linear(dims[layer], dims[layer+1]))
-  -- end
-
-  -- -------- Output Layer
-  -- if nn[config.output] then
-  --   model:add(nn[config.output]())
-  -- end
   return network
 end

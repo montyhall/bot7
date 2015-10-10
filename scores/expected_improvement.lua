@@ -10,7 +10,7 @@ The (optional) 'tradeoff' parameter helps govern
 the balance between exploration and exploitation.
 
 Authored: 2015-09-16 (jwilson)
-Modified: 2015-10-02
+Modified: 2015-10-10
 --]]
 
 ---------------- External Dependencies
@@ -68,16 +68,18 @@ end
 function EI.compute(fval, fvar, fmin, tradeoff)
   local tradeoff = config.tradeoff or 0.0
 
-  local sigma = fvar:sqrt()
-  local resid = fval:mul(-1.0):add(fmin:expandAs(fval)):add(-tradeoff)
-  local zvals = resid:cdiv(sigma)
+  ---- Compute required terms
+  local sigma = torch.sqrt(fvar):squeeze()
+  local imprv = torch.add(fmin:expandAs(fval), -fval):add(-tradeoff)
+  local zvals = torch.cdiv(imprv, sigma)
 
-  local ei = resid:cmul(utils.standard_cdf(zvals))
-                  :add(sigma:cmul(utils.standard_pdf(zvals)))
+  ---- Calculate expected improvement
+  local ei = imprv:cmul(utils.norm_cdf(zvals))
+                  :add(sigma:cmul(utils.norm_pdf(zvals)))
                   :clamp(0, math.huge)
 
   -------- Take sample average
-  if (ei:dim() > 1 and ei:size(2) > 1) then
+  if ei:dim() > 1 and ei:size(2) > 1 then
     ei = ei:mean(2)
   end
   

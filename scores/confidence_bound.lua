@@ -13,7 +13,7 @@ The (optional) 'tradeoff' parameter helps govern
 the balance between exploration and exploitation.
 
 Authored: 2015-09-17 (jwilson)
-Modified: 2015-09-28
+Modified: 2015-10-10
 --]]
 
 ---------------- External Dependencies
@@ -95,12 +95,12 @@ end
 
 function conf_bound.UCB(fval, fvar, tradeoff)
   local tradeoff = tradeoff or 1.0
-  local ucb = fval:add(fvar:sqrt():mul(tradeoff))
+  local ucb = torch.add(fval, torch.sqrt(fvar):mul(tradeoff))
   return ucb
 end
 
 function conf_bound.LCB(fval, fvar, tradeoff)
   local tradeoff = tradeoff or 1.0
-  local lcb = fval:add(-fvar:sqrt():mul(tradeoff))
+  local lcb = torch.add(fval, -torch.sqrt(fvar):mul(tradeoff))
   return lcb
 end

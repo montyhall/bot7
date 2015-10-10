@@ -47,7 +47,6 @@ function bot:configure(config)
 
   -------- Score
   local score      = config.score or {}
-  print(score)
   score['type']    = score.type or 'expected_improvement'
   config['score']  = score
 

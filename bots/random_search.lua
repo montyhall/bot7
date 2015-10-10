@@ -5,7 +5,7 @@
 Random search bot class for bot7.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-10-02
+Modified: 2015-10-10
 --]]
 
 ---------------- External Dependencies
@@ -21,7 +21,7 @@ local bot, parent = torch.class(title, parent)
 
 function bot:eval()
   -- Random search; so, do nothing. 
-  -- Message here ot appease warning.
+  -- Message here to appease warning.
 end
 
 ---------------- Nominate a candidate 

@@ -5,7 +5,7 @@
 Abstact base class for bot7 bots.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-10-05
+Modified: 2015-10-09
 --]]
 
 ---------------- External Dependencies

@@ -5,7 +5,7 @@
 Uniform psuedorandom grid.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-09-30
+Modified: 2015-10-09
 --]]
 
 ------------------------------------------------
@@ -22,6 +22,7 @@ end
 
 function grid.generate(config)
   local X = torch.rand(config.size, config.dims)
-        X:cmul((config.maxes - config.mins):expandAs(X)):add(config.mins:expandAs(X)) 
+  if config.mins  then X:add(torch.add(config.mins, X:min(1)[1]):expandAs(X))    end
+  if config.maxes then X:cmul(torch.cdiv(config.maxes, X:max(1)[1]):expandAs(X)) end
   return X
 end

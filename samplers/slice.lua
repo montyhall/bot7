@@ -5,7 +5,7 @@
 Slice sampler for bot7.
 
 Authored: 2015-09-16 (jwilson)
-Modified: 2015-09-28
+Modified: 2015-10-10
 --]]
 
 ---------------- External Dependencies
@@ -44,10 +44,6 @@ function sampler.configure(opt)
     opt['logspace'] = true
   end
 
-  -------- Exponentiate sampled values X
-  if opt.expon ~= false and opt.logspace then
-    opt['expon'] = true
-  end
   return opt
 end
 
@@ -87,11 +83,6 @@ function sampler.sample(f, X0, opt, f_args)
       samples[n] = sampler.directed_slice(opt, f, f_args, dir, x0)
       collectgarbage()
     end
-  end
-
-  ---------------- Postprocessing
-  if opt.expon then
-    samples = samples:exp()
   end
 
   return samples

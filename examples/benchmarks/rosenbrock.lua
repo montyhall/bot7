@@ -12,16 +12,16 @@ where:
  b := -1.0
  z := 15*(x - 1/3)
 
-and, domain(x) := [0,1]^n
+and, domain(x) := [0,1]^n for n > 1
 
 Global Minima:
 f(x*) = 0 at 
-  x* := (0.4, 0.4, 0.4, 0.4)
-  z* := (1.0, 1.0, 1.0, 1.0)
+  x* := (0.4, ..., 0.4)
+  z* := (1.0, ..., 1.0)
 
   
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-10-10
+Modified: 2015-10-11
 --]]
 
 ---------------- Constants
@@ -38,9 +38,13 @@ local rosenbrock = function(X)
   if (Z:dim() == 1 or Z:size(1) == Z:nElement()) then
     Z:resize(1, Z:nElement())
   end
+  local stride = Z:size(2) - 1
+  assert(stride > 0)
+
   -------- Compute Rosenbrock Valley Function (Rescaled)
-  local Y = torch.add(torch.pow(Z:narrow(2,1,3), 2), -Z:narrow(2,2,3)):pow(2):mul(a)
-                 :add(torch.add(Z:narrow(2,1,3), b):pow(2)):sum(2)
+  local stride = Z:size(2) - 1
+  local Y = torch.add(torch.pow(Z:narrow(2, 1, stride), 2), -Z:narrow(2,2,stride))
+              :pow(2):mul(a):add(torch.add(Z:narrow(2, 1, stride), b):pow(2)):sum(2)
   return Y
 end
 

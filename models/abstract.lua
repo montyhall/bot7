@@ -5,13 +5,13 @@
 Abstract base class for bot7 models.
 
 Authored: 2015-09-15 (jwilson)
-Modified: 2015-09-30
+Modified: 2015-10-11
 --]]
 
 ------------------------------------------------
---                                     metamodel
+--                                      abstract 
 ------------------------------------------------
-local title = 'bot7.models.metamodel'
+local title = 'bot7.models.abstract'
 local model = torch.class(title)
 
 function model:__init()

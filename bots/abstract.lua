@@ -5,7 +5,7 @@
 Abstact base class for bot7 bots.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-10-09
+Modified: 2015-10-11
 --]]
 
 ---------------- External Dependencies
@@ -13,9 +13,9 @@ local utils = require('bot7.utils')
 local Grids = require('bot7.grids')
 
 ------------------------------------------------
---                                       metabot
+--                                      abstract
 ------------------------------------------------
-local title = 'bot7.bots.metabot'
+local title = 'bot7.bots.abstract'
 local bot   = torch.class(title)
 
 function bot:__init(config, objective, cache)

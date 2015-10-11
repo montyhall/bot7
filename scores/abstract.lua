@@ -6,13 +6,13 @@ Abstract base class for bot7 acquisition
 functions (scores). 
 
 Authored: 2015-09-16 (jwilson)
-Modified: 2015-09-28
+Modified: 2015-10-11
 --]]
 
 ------------------------------------------------
---                                     metascore
+--                                      abstract
 ------------------------------------------------
-local title  = 'bot7.scores.metascore'
+local title  = 'bot7.scores.abstract'
 local score  = torch.class(title)
 
 function score:__init()

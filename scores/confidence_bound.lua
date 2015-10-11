@@ -13,7 +13,7 @@ The (optional) 'tradeoff' parameter helps govern
 the balance between exploration and exploitation.
 
 Authored: 2015-09-17 (jwilson)
-Modified: 2015-10-10
+Modified: 2015-10-11
 --]]
 
 ---------------- External Dependencies
@@ -23,7 +23,7 @@ local utils = require('bot7.utils')
 --                              confidence_bound
 ------------------------------------------------
 local title  = 'bot7.scores.confidence_bound'
-local parent = 'bot7.scores.metascore'
+local parent = 'bot7.scores.abstract'
 local conf_bound, parent = torch.class(title, parent)
 
 function conf_bound:__init(config)

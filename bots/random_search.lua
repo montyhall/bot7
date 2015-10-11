@@ -5,7 +5,7 @@
 Random search bot class for bot7.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-10-10
+Modified: 2015-10-11
 --]]
 
 ---------------- External Dependencies
@@ -16,7 +16,7 @@ local utils = require('bot7.utils')
 --                                 random_search
 ------------------------------------------------
 local title  = 'bot7.bots.random_search'
-local parent = 'bot7.bots.metabot'
+local parent = 'bot7.bots.abstract'
 local bot, parent = torch.class(title, parent)
 
 function bot:eval()

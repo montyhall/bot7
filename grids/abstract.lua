@@ -5,13 +5,13 @@
 Abstract base class for bot7 grids.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-09-28
+Modified: 2015-10-11
 --]]
 
 ------------------------------------------------
---                                      metagrid
+--                                      abstract
 ------------------------------------------------
-local title = 'bot7.grids.metagrid'
+local title = 'bot7.grids.abstract'
 local grid  = torch.class(title)
 
 function grid:__init()

@@ -5,13 +5,13 @@
 Abstact base class for bot7 samplers.
 
 Authored: 2015-09-16 (jwilson)
-Modified: 2015-09-28
+Modified: 2015-10-11
 --]]
 
 ------------------------------------------------
---                                   metasampler
+--                                      abstract
 ------------------------------------------------
-local title   = 'bot7.samplers.metasampler'
+local title   = 'bot7.samplers.abstract'
 local sampler = torch.class(title)
 
 function sampler:__init()

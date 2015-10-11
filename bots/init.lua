@@ -5,7 +5,7 @@
 Initialization file for bot7 bots class.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-09-30
+Modified: 2015-10-11
 --]]
 
 ------------------------------------------------
@@ -13,7 +13,7 @@ Modified: 2015-09-30
 ------------------------------------------------
 bot7 = bot7 or {}
 bot7['bots'] = {}
-include('metabot.lua')
+include('abstract.lua')
 include('random_search.lua')
 include('bayesopt.lua')
 include('trainer.lua')

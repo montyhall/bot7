@@ -5,7 +5,7 @@
 Slice sampler for bot7.
 
 Authored: 2015-09-16 (jwilson)
-Modified: 2015-10-10
+Modified: 2015-10-11
 --]]
 
 ---------------- External Dependencies
@@ -15,7 +15,7 @@ local utils = require('bot7.utils')
 --                                         slice
 ------------------------------------------------
 local title  = 'bot7.samplers.slice'
-local parent = 'bot7.samplers.metasampler'
+local parent = 'bot7.samplers.abstract'
 local sampler, parent = torch.class(title, parent)
 
 function sampler:__init()

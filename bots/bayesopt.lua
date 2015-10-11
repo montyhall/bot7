@@ -5,7 +5,7 @@
 Bayesian Optimization bot class for bot7.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-10-05
+Modified: 2015-10-11
 --]]
 
 ---------------- External Dependencies
@@ -18,7 +18,7 @@ local math   = require('math')
 --                                      bayesopt
 ------------------------------------------------
 local title  = 'bot7.bots.bayesopt'
-local parent = 'bot7.bots.metabot'
+local parent = 'bot7.bots.abstract'
 local bot, parent = torch.class(title, parent)
 
 function bot:__init(config, objective, cache)

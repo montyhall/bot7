@@ -5,14 +5,14 @@
 Uniform psuedorandom grid.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-10-09
+Modified: 2015-10-11
 --]]
 
 ------------------------------------------------
 --                                        random
 ------------------------------------------------
 local title  = 'bot7.grids.random'
-local parent = 'bot7.grids.metagrid'
+local parent = 'bot7.grids.abstract'
 local grid, parent = torch.class(title, parent)
 
 function grid:__init(config)

@@ -11,7 +11,7 @@ Target Article:
 Neural Networks" (Snoek et. al 2015)
 
 Authored: 2015-09-30 (jwilson)
-Modified: 2015-10-05
+Modified: 2015-10-11
 --]]
 
 ---------------- External Dependencies
@@ -22,7 +22,7 @@ local BLR   = require('gp.models').bayes_linear
 --                                          dngo
 ------------------------------------------------
 local title  = 'bot7.models.dngo'
-local parent = 'bot7.models.metamodel'
+local parent = 'bot7.models.abstract'
 local dngo, parent = torch.class(title, parent)
 
 --------------------------------

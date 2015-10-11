@@ -10,7 +10,7 @@ The (optional) 'tradeoff' parameter helps govern
 the balance between exploration and exploitation.
 
 Authored: 2015-09-16 (jwilson)
-Modified: 2015-10-10
+Modified: 2015-10-11
 --]]
 
 ---------------- External Dependencies
@@ -21,7 +21,7 @@ local math  = require('math')
 --                          expected_improvement
 ------------------------------------------------
 local title  = 'bot7.scores.expected_improvement'
-local parent = 'bot7.scores.metascore'
+local parent = 'bot7.scores.abstract'
 local EI, parent = torch.class(title, parent)
 
 function EI:__init(config)

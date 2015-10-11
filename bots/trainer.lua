@@ -18,7 +18,7 @@ Expects data to be passed in as:
   ------------------------------
 
 Authored: 2015-09-30 (jwilson)
-Modified: 2015-10-09
+Modified: 2015-10-11
 --]]
 
 ---------------- External Dependencies
@@ -31,7 +31,7 @@ local NN    = require('nn')
 --                                       trainer
 ------------------------------------------------
 local title  = 'bot7.bots.trainer'
-local parent = 'bot7.bots.metabot'
+local parent = 'bot7.bots.abstract'
 local bot, parent = torch.class(title, parent)
 
 function bot:__init(config, data)

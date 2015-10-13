@@ -80,8 +80,8 @@ function bot:configure(config, data)
     end
   end
   model['nLayers'] = model.nLayers or 3
-  model['nHidden'] = model.nHidden or {100, 100, 100, 100}
-  model['dropout'] = model.dropout or {0, 0, 0, 0}
+  model['nHidden'] = model.nHidden or 100
+  model['dropout'] = model.dropout or 0
   config['model']  = model
 
   ---------------- Optimization Settings
@@ -97,8 +97,27 @@ end
 
 function bot:build(config)
   local config = config or self.config.model
-  local dims   = torch.cat(torch.Tensor(config.nHidden), 
+
+  local dims
+  if torch.isTensor(config.nHidden) then
+    dims = torch.cat(config.nHidden, torch.Tensor{config.yDim})
+  elseif type(config.nHidden) == 'table' then
+    dims = torch.cat(torch.Tensor(config.nHidden), torch.Tensor{config.yDim})
+  else
+    dims = torch.cat(torch.Tensor(config.nLayers+1):fill(config.nHidden), 
                            torch.Tensor{config.yDim})
+  end
+
+  local dropout
+  if torch.isTensor(config.dropout) then
+    dropout = torch.cat(config.dropout, torch.zeros(1))
+  elseif type(config.dropout) == 'table' then
+    dropout = torch.cat(torch.Tensor(config.dropout), torch.zeros(1))
+  else
+    dropout = torch.zeros(config.nLayers+2)
+    dropout:sub(2, config.nLayers+1):fill(config.dropout)
+  end
+
 
   -------- Input Layer 
   local model = NN.Sequential()

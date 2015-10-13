@@ -1,6 +1,6 @@
 [![Join the chat at https://gitter.im/torch/torch7](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/j-wilson/bot7?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-__Notice__: At present, `bot7` requires use of updated Torch7 features not yet merged into torch/torch7. For the time being please use: https://github.com/j-wilson/torch7/tree/dev.
+__Notice__: Please be sure to update your copy of `Torch7` prior to work with `bot7`.
 
 <a name="bot7.intro.dok"/>
 # bot7 #
@@ -36,6 +36,4 @@ bot7.bots.        bot7.scores.      bot7.utils.
 ```
 
 ## Developers' Notes ##
-Please be sure to grab an updated copy of Torch7 prior to using bot7, as the package relies on newer functions (e.g. torch.potrf/s).
-
 Further documentation coming soon.

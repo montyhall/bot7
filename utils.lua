@@ -5,7 +5,7 @@
 Utility methods for bot7.
 
 Authored: 2015-09-12 (jwilson)
-Modified: 2015-10-10
+Modified: 2015-10-13
 --]]
 
 ---------------- External Dependencies
@@ -25,8 +25,41 @@ local utils = {}
 --         Imports from penlight
 --------------------------------
 utils.find     = require('pl.tablex').find
-utils.tbl_size = require('pl.tablex').size
 utils.deepcopy = require('pl.tablex').deepcopy
+
+--------------------------------
+--                    Table size
+--------------------------------
+function utils.tbl_size(tbl, recurse)
+  local size = tablex.size
+  if not recurse then
+    return size(tbl)
+  else
+    local N = 0
+    for _, val in pairs(tbl) do
+      if type(val) == 'table' then
+        N = N + utils.tbl_size(val, true)
+      else
+        N = N + 1
+      end
+    end
+    return N
+  end
+end
+
+--------------------------------
+--                  Update table
+--------------------------------
+function utils.tbl_update(res, src)
+  for key, val in pairs(src) do
+    if type(res[key] == 'table') and type(src[key]) == 'table' then
+      utils.tbl_update(res[key], src[key])
+    else
+      res[key] = src[key]
+    end
+  end
+  return res
+end
 
 --------------------------------
 --              Tensor to String
@@ -43,7 +76,7 @@ function utils.tnsr2str(tnsr, config)
     print('0-dimensional tensors cannot be converted to string.')
     return
   end
-  if (nDims == 1) then
+  if (nDims == 1 or utils.shape(tnsr):max() == tnsr:nElement()) then
     if align == 'vert' then
       tnsr = tnsr:clone():resize(tnsr:nElement(), 1)
     else

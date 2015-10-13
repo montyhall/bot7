@@ -18,7 +18,7 @@ Expects data to be passed in as:
   ------------------------------
 
 Authored: 2015-09-30 (jwilson)
-Modified: 2015-10-11
+Modified: 2015-10-13
 --]]
 
 ---------------- External Dependencies
@@ -66,13 +66,21 @@ function bot:configure(config, data)
 
   ---------------- Model settings
   local model      = config.model or {}
+  model['problem'] = model.problem or 'classification'
   model['output']  = model.output or 'LogSoftMax'
   if data then
     model['xDim']  = data.xr:size(2)
-    model['yDim']  = data.yr:size(2)
+    if data.yr:dim() > 1 then 
+      model['yDim']  = data.yr:size(2)
+      model.problem  = 'regression'
+    elseif model.problem == 'classification' then
+      model['yDim']  = data.yr:max()
+    else
+      model['yDim']  = 1
+    end
   end
   model['nLayers'] = model.nLayers or 3
-  model['nHidden'] = model.nHidden or {50, 50, 50, 50}
+  model['nHidden'] = model.nHidden or {100, 100, 100, 100}
   model['dropout'] = model.dropout or {0, 0, 0, 0}
   config['model']  = model
 
@@ -124,12 +132,22 @@ function bot:train(data, model, optimizer, criterion, state)
   local counts = {r=data.xr:size(1), e=0, v=0}
   if data.xe and data.ye then counts.e = data.xe:size(1) end
   if data.xv and data.yv then counts.v = data.xv:size(1) end
-  local xDim, yDim, nCol = data.xr:size(2), data.yr:size(2), 0
+
+  local xDim, nCol = data.xr:size(2), 0
+
+  local yDim, targets
+  if data.yr:dim() > 1 then
+    yDim    = data.yr:size(2) 
+    targets = torch.Tensor(sched.batchsize, yDim)
+  else
+    yDim    = 1
+    targets = torch.Tensor(sched.batchsize)
+  end
 
   -------- Local Aliases / Tensor Preallocation
   local W, grad   = model:getParameters()
   local inputs    = torch.Tensor(sched.batchsize, xDim)
-  local targets   = torch.Tensor(sched.batchsize, yDim)
+  
   local suffix    = {'e', 'r', 'v'}
   local nSets, nEvals, trace = 0, 0, {} 
   if sched.eval_freq > 0 then
@@ -137,7 +155,8 @@ function bot:train(data, model, optimizer, criterion, state)
     if counts.r > 0 then nSets = nSets + 1 end
     if counts.e > 0 then nSets = nSets + 1 end
     if counts.v > 0 then nSets = nSets + 1 end
-    trace = torch.Tensor(nEvals, nSets+1):fill(-1) -- first position stores epoch
+    trace = torch.Tensor(nEvals, nSets+1) -- first position stores epoch
+    trace:select(2,1):fill(-1); trace:narrow(2, 2, nSets):fill(0/0)
   end
   
   local shuffle = function(suffix)
@@ -160,7 +179,6 @@ function bot:train(data, model, optimizer, criterion, state)
     return fval, grad
   end
 
-
   local eval = function(suffix)
     local suffix = suffix or 'r'
     model:evaluate()
@@ -171,7 +189,12 @@ function bot:train(data, model, optimizer, criterion, state)
       head = math.min(head + batchsize, counts[suffix])
       nCol = head-tail+1
       inputs:resize(nCol,xDim):copy(data['x'..suffix]:sub(tail, head))
-      targets:resize(nCol,yDim):copy(data['y'..suffix]:sub(tail, head))
+      if yDim > 1 then
+        targets:resize(nCol,yDim):copy(data['y'..suffix]:sub(tail, head))
+      else
+        targets:resize(nCol):copy(data['y'..suffix]:sub(tail, head))
+      end
+
       outputs = model:forward(inputs)
       loss    = loss + criterion:forward(outputs, targets)
     end
@@ -189,7 +212,11 @@ function bot:train(data, model, optimizer, criterion, state)
       head = math.min(head + batchsize, counts[suffix])
       nCol = head-tail+1
       inputs:resize(nCol,xDim):copy(data['x'..suffix]:sub(tail, head))
-      targets:resize(nCol,yDim):copy(data['y'..suffix]:sub(tail, head))
+      if yDim > 1 then
+        targets:resize(nCol,yDim):copy(data['y'..suffix]:sub(tail, head))
+      else
+        targets:resize(nCol):copy(data['y'..suffix]:sub(tail, head))
+      end
       optimizer(closure, W, config.optim, state)
     end
   end

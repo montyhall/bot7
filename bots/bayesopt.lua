@@ -5,7 +5,7 @@
 Bayesian Optimization bot class for bot7.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-10-11
+Modified: 2015-10-25
 --]]
 
 ---------------- External Dependencies
@@ -30,7 +30,6 @@ function bot:__init(config, objective, cache)
   -------- Initialize model / acquisition function
   self.model = cache.model or Models[config.model.type](config.model)
   self.score = cache.score or Scores[config.score.type](config.score)
-
 end
 
 function bot:configure(config)
@@ -68,7 +67,7 @@ function bot:eval(candidates)
   else
     local samples  = self.model:sample_hypers(X_obs, Y_obs)
     local score    = torch.zeros(X_hid:size(1))
-    local nSamples = self.config.nSamples
+    local nSamples = self.config.bot.nSamples
     local hyp      = torch.Tensor()
 
     for s = 1,nSamples do
@@ -88,7 +87,7 @@ function bot:nominate(candidates)
   local idx
 
   -------- Select initial points randomly
-  if self.nTrials <= self.config.nInitial then
+  if self.nTrials <= self.config.bot.nInitial then
     idx = torch.rand(1):mul(candidates:size(1)):long():add(1)
 
   -------- Nominate according to acquistion values
@@ -96,6 +95,5 @@ function bot:nominate(candidates)
     local score = self:eval(candidates)
     min, idx  = score:max(1)
   end
-
   return idx
 end

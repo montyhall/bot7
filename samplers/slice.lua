@@ -5,7 +5,7 @@
 Slice sampler for bot7.
 
 Authored: 2015-09-16 (jwilson)
-Modified: 2015-10-11
+Modified: 2015-10-19
 --]]
 
 ---------------- External Dependencies
@@ -43,7 +43,7 @@ function sampler.configure(opt)
   if opt.logspace ~= false then
     opt['logspace'] = true
   end
-
+  
   return opt
 end
 

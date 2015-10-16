@@ -11,6 +11,7 @@ __bot7__ is a framework for Bayesian Optimization implemented in Torch7. For it'
 Directory    | Content 
 :-------------:|:----------------------
 bots       | Automated experiment runners
+nnTools    | Convenience methods for Neural Networks
 models     | Target function models
 scores     | Acquisition functions (incl. EI, UCB)
 grids      | Candidate grids

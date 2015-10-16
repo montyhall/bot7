@@ -11,12 +11,13 @@ Target Article:
 Neural Networks" (Snoek et. al 2015)
 
 Authored: 2015-09-30 (jwilson)
-Modified: 2015-10-11
+Modified: 2015-10-25
 --]]
 
 ---------------- External Dependencies
 local utils = require('bot7.utils')
 local BLR   = require('gp.models').bayes_linear
+local nnTools = require('bot7.nnTools')
 
 ------------------------------------------------
 --                                          dngo
@@ -34,6 +35,7 @@ function dngo:__init(config, cache, X, Y)
   self.config    = cache.config or config or {}
   self.network   = cache.network
   self.predictor = cache.predictor
+  self.state     = cache.state or {}
   self.criterion = criterion or nn.MSECriterion()
   self.optimizer = cache.optimizer or optim.sgd
   self:init(X,Y)
@@ -46,14 +48,18 @@ function dngo:init(X, Y)
 
   -------- Local Variables
   local config = self.config
+  local data   = {xr=X, yr=Y}
 
   -------- Construct model (if necessary)
-  if not self.network then 
-    self.network = self:build(X, Y, config.network)
+  if not self.network then
+    self.network = nnTools.builder(config.network, data)
+    -- self.network = self:build(X, Y, config.network)
   end
 
-  -------- Update network, do first to ensure tensor shapes
-  self:update(X, Y, config.init or config.update)
+  -------- Update network; do first to ensure tensor shapes
+  nnTools.trainer(self.network, data, config.init or config.update,
+                  self.optimizer, self.criterion, self.state)
+  -- self:update(X, Y, config.init or config.update)
 
   -------- Initialize predictor
   if not self.predictor then 
@@ -89,35 +95,13 @@ function dngo:init(X, Y)
   config.zDim = self.basis.output:size(2) -- Output dim of basis
 end
 
-function dngo:cov(hyp, X0, X1)
-  local config    = self.config
-  local network   = self.network
-  local predictor = self.predictor
-
-  local N0, N1  = X0:size(1), X1:size(1)
-  local N, xDim = N0 + N1, X0:size(2)
-
-  local outputs = torch.FloatTensor(N, config.zDim) -- cpu
-  local inputs  = torch.Tensor(config.batchsize, xDim)
-  local head    = config.batchsize+1
-
-  for tail = 1, N0, config.batchsize do
-    inputs:resize(head-tail):copy(X0:sub(tail, head))
-    network:forward(inputs)
-    outputs:sub(tail, head):copy(self.basis.output)
-    head = head + tail
-  end
-
-  return predictor:cov_func(outputs)
-end
-
 function dngo:predict(X0, Y0, X1, hyp, req, skip)
   local hyp       = hyp or 'marginalize'
   local req       = req or {mean=true, var=true}
   local network   = self.network
   local predictor = self.predictor
   local config    = self.config
-  local batchsize = config.batchsize or config.update.batchsize -- hack
+  local batchsize = config.update.schedule.batchsize -- hack
 
   -------- Size Information 
   local N0, N1 = X0:size(1), X1:size(1)
@@ -128,8 +112,20 @@ function dngo:predict(X0, Y0, X1, hyp, req, skip)
   local Z1 = torch.DoubleTensor(N1, config.zDim)
   local x  = torch.Tensor(batchsize, xDim) 
 
+  
+  -- if not skip then self:update(X0, Y0) end
   -------- Update network / basis function
-  if not skip then self:update(X0, Y0) end
+  if not skip then
+    local config = config.update
+    local res = nnTools.trainer(self.network, {xr=X0, yr=Y0}, config, 
+                    self.optimizer, self.criterion, self.state)
+    print(string.format('Network MSE: %.2e', res[{1,1}]))
+
+    local nEvals = self.state.evalCounter
+    local lRate  = config.optimizer.learningRate/
+                    (1 + nEvals*config.optimizer.learningRateDecay)
+    print(string.format('Learning Rate: %.2E, nEvals: %d',lRate, nEvals))
+  end
   network:evaluate()
   
   -------- Transform X0 -> Z0
@@ -153,113 +149,54 @@ function dngo:predict(X0, Y0, X1, hyp, req, skip)
   return predictor:predict(Z0, Y0, Z1, nil, hyp, req)
 end
 
-function dngo:update(X, Y, config)
-  -------- Local aliases
-  local config    = config or self.config.update
-  local network   = self.network
-  local criterion = self.criterion
-  local optimizer = self.optimizer
-  local W, grad   = network:getParameters()
-  local batchsize = config.batchsize
+-- function dngo:update(X, Y, config)
+--   -------- Local aliases
+--   local config    = config or self.config.update
+--   local network   = self.network
+--   local criterion = self.criterion
+--   local optimizer = self.optimizer
+--   local W, grad   = network:getParameters()
+--   local batchsize = config.batchsize
 
-  -------- Shape information
-  local N    = X:size(1)
-  local xDim = X:size(2)
-  local yDim = Y:size(2)
+--   -------- Shape information
+--   local N    = X:size(1)
+--   local xDim = X:size(2)
+--   local yDim = Y:size(2)
   
-  -------- Tensor preallocation
-  local inputs  = torch.Tensor(batchsize, xDim)
-  local targets = torch.Tensor(batchsize, yDim)
+--   -------- Tensor preallocation
+--   local inputs  = torch.Tensor(batchsize, xDim)
+--   local targets = torch.Tensor(batchsize, yDim)
 
-  local nEvals = config.evalCounter or 0
-  local lRate  = config.learningRate/(1 + nEvals*config.learningRateDecay)
-  print(string.format('Learning Rate: %.2E, nEvals: %d',lRate, nEvals))
+--   local nEvals = config.evalCounter or 0
+--   local lRate  = config.learningRate/(1 + nEvals*config.learningRateDecay)
+--   print(string.format('Learning Rate: %.2E, nEvals: %d',lRate, nEvals))
 
-  -------- Functional closure 
-  local closure = function(x)
-    if x ~= W then W:copy(x) end
-    grad:zero() -- reset grads
-    local outputs = network:forward(inputs) -- fprop
-    local fval    = criterion:forward(outputs, targets)
-    local df_dw   = criterion:backward(outputs, targets)
-    network:backward(inputs, df_dw) -- bprop
-    fval = fval/batchsize
-    return fval, grad
-  end
+--   -------- Functional closure 
+--   local closure = function(x)
+--     if x ~= W then W:copy(x) end
+--     grad:zero() -- reset grads
+--     local outputs = network:forward(inputs) -- fprop
+--     local fval    = criterion:forward(outputs, targets)
+--     local df_dw   = criterion:backward(outputs, targets)
+--     network:backward(inputs, df_dw) -- bprop
+--     fval = fval/batchsize
+--     return fval, grad
+--   end
 
-  -------- Main training loop
-  -- config.evalCounter = 0 -- reset evalCounter?
-  network:training()
-  local order, idx, head, size
-  for epoch = 1, config.nEpochs do
-    order = torch.randperm(N, 'torch.LongTensor')
-    head  = 0
-    for tail = 1, N, batchsize do
-      head = math.min(head + batchsize, N)
-      size = head-tail+1
-      idx  = order:sub(tail, head)
-      inputs:resize(size,xDim):copy(X:index(1, idx))
-      targets:resize(size,yDim):copy(Y:index(1, idx))
-      optimizer(closure, W, config)
-    end
-  end
-end
-
-
-function dngo:build(X, Y, config)
-  local config = config or {}
-
-  ---------------- Default settings
-  config['xDim']    = X:size(2)
-  config['yDim']    = Y:size(2)
-  config['output']  = config.output or ''
-  config['weights'] = config.weights or 'Linear'
-  config['nLayers'] = config.nLayers or 3
-  config['nHidden'] = config.nHidden or 50
-  config['dropout'] = config.dropout or 0
-  config['activation'] = config.activation or 'Tanh'
-
-  -------- Transform listed terms to tables 
-  local nLayers = config.nLayers
-  local keys = {'nHidden', 'dropout', 'weights', 'activation'}
-  for k = 1, utils.tbl_size(keys) do
-    if type(config[keys[k]]) ~= 'table' then
-      local tbl = {}
-      for l = 1, nLayers + 1 do 
-        tbl[l] = config[keys[k]] 
-      end
-      config[keys[k]] = tbl
-    end
-  end
-  config.nHidden[nLayers+1] = nil -- remove possible extra
-
-  -------- Input-layer settings
-  config.dropout[1] = 0.0
-
-  -------- Output-layer settings
-  config.activation[nLayers+1] = config.output
-  config.dropout[nLayers+1]    = 0.0
-  
-  local dims = torch.cat({torch.Tensor{config.xDim},
-                          torch.Tensor(config.nHidden), 
-                          torch.Tensor{config.yDim}})
-
-  -------- Iteratively construct network
-  local network = nn.Sequential()
-  for l = 1, nLayers+1 do
-    -------- Weights Module 
-    if nn[config.weights[l]] then 
-        network:add(nn[config.weights[l]](dims[l], dims[l+1]))
-    end
-    -------- Activation Function
-    if nn[config.activation[l]] then
-      network:add(nn[config.activation[l]]())
-    end
-    -------- Dropout Layer
-    local rate = config.dropout[l]
-    if rate > 0 and rate < 1 then
-      network:add(nn.Dropout(rate))
-    end
-  end
-  return network
-end
+--   -------- Main training loop
+--   -- config.evalCounter = 0 -- reset evalCounter?
+--   network:training()
+--   local order, idx, head, size
+--   for epoch = 1, config.nEpochs do
+--     order = torch.randperm(N, 'torch.LongTensor')
+--     head  = 0
+--     for tail = 1, N, batchsize do
+--       head = math.min(head + batchsize, N)
+--       size = head-tail+1
+--       idx  = order:sub(tail, head)
+--       inputs:resize(size,xDim):copy(X:index(1, idx))
+--       targets:resize(size,yDim):copy(Y:index(1, idx))
+--       optimizer(closure, W, config)
+--     end
+--   end
+-- end

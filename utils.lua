@@ -5,7 +5,7 @@
 Utility methods for bot7.
 
 Authored: 2015-09-12 (jwilson)
-Modified: 2015-10-13
+Modified: 2015-10-25
 --]]
 
 ---------------- External Dependencies
@@ -30,15 +30,17 @@ utils.deepcopy = require('pl.tablex').deepcopy
 --------------------------------
 --                    Table size
 --------------------------------
-function utils.tbl_size(tbl, recurse)
+function utils.tbl_size(tbl, recurse, max_depth, depth)
   local size = tablex.size
-  if not recurse then
+  local max_depth = max_depth or math.huge
+  local depth = depth or 0
+  if not recurse or depth > max_depth then
     return size(tbl)
   else
     local N = 0
     for _, val in pairs(tbl) do
       if type(val) == 'table' then
-        N = N + utils.tbl_size(val, true)
+        N = N + utils.tbl_size(val, true, max_depth, depth+1)
       else
         N = N + 1
       end
@@ -50,15 +52,67 @@ end
 --------------------------------
 --                  Update table
 --------------------------------
-function utils.tbl_update(res, src)
+function utils.tbl_update(res, src, keep)
+  local res, src = res or {}, src or {}
   for key, val in pairs(src) do
-    if type(res[key] == 'table') and type(src[key]) == 'table' then
-      utils.tbl_update(res[key], src[key])
+    if type(res[key] == 'table') and type(val) == 'table' then
+      res[key] = utils.tbl_update(res[key], val, keep)
     else
-      res[key] = src[key]
+      if not keep or not res[key] then
+        res[key] = val
+      end
     end
   end
   return res
+end
+
+--------------------------------
+--          Print section header
+--------------------------------
+function utils.printSection(str, width, timetamp)
+  if not os then require 'os' end
+
+  local str      = str   or ''
+  local width    = width or 48
+  local time     = timestamp or (timestamp==nil)
+  local delim_r  = ' |'
+  local delim_l  = '| '
+  local barStyle = '='
+  local barReps  = width / barStyle:len()
+
+  local message   = delim_l
+  local strLength = delim_l:len() + delim_r:len() + str:len()
+  if timestamp then
+    timestamp = os.date("%d/%m - %H:%M%p ")
+    strLength = strLength + timestamp:len()
+    message   = message .. timestamp
+  end
+
+  message = '\n' .. string.rep(barStyle, barReps) ..
+            '\n' .. message .. string.rep(' ', width - strLength).. str .. delim_r
+            '\n' .. string.rep(barStyle, barReps)
+
+  print(message)
+end
+
+--------------------------------
+--   Print command line argument
+--------------------------------
+function utils.printArgs()
+  utils.printSection('Command Line Arguments:', 32)
+  local count,k = 0, 0
+  while k < #arg do
+    count, k = count+1, k+1
+    if arg[k] ~= '-verbose' then
+      if k < #arg and arg[k+1]:sub(1,1) ~= '-' then
+        print(string.format('[%d]  %s \t %s',count, arg[k],arg[k+1]))
+        k = k+1
+      else
+        print(string.format('[%d]  %s',count, arg[k]))
+      end
+    end
+  end
+  print(' ')
 end
 
 --------------------------------
@@ -71,33 +125,59 @@ function utils.tnsr2str(tnsr, config)
   config.delim  = config.delim  or ''
   config.format = config.format or '%.2e'
   config.align  = config.align  or 'horiz'
-  
+  config.rectangular = config.rectangular or true
+
+  ---- Handle tensor dimensionality 
   if (nDims == 0) then
     print('0-dimensional tensors cannot be converted to string.')
     return
   end
-  if (nDims == 1 or utils.shape(tnsr):max() == tnsr:nElement()) then
-    if align == 'vert' then
-      tnsr = tnsr:clone():resize(tnsr:nElement(), 1)
-    else
-      tnsr = tnsr:clone():resize(1, tnsr:nElement())
-    end
+
+  if nDims == 1 then
+    tnsr = tnsr:reshape(1, tnsr:nElement())
   end
-  local nRow, nCol = tnsr:size(1), tnsr:size(2)
+
+  local N, nRow, nCol = tnsr:nElement(), tnsr:size(1), tnsr:size(2)
+
   if (nDims > 2)  then
     if nRow*nCol == tnsr:nElement() then
-      tnsr = tnsr:clone():resize(nRow, nCol)
+      tnsr = tnsr:reshape(nRow, nCol) -- dont squeeze, avoid 1x1
     else
       print('Support for >2 tensors not currently available for tnsr2str()')
       return
     end
+  end 
+
+  local vertical = (config.align == 'vert' or align == 'vertical')
+
+  ---- Reshape to specified output style
+  if config.rectangular then
+    if vertical then
+      nCol = math.ceil(math.sqrt(N))
+      nRow = math.ceil(N/nCol)
+    else
+      nRow = math.ceil(math.sqrt(N))
+      nCol = math.ceil(N/nRow)
+    end
+    if nCol*nRow > N then
+      local pad = torch.Tensor(nCol*nRow - N, 1):fill(0/0)
+      tnsr = torch.cat(tnsr, pad):resize(nRow, nCol)
+    else
+      tnsr = tnsr:reshape(nRow, nCol)
+    end
+  elseif utils.shape(tnsr):max() == N and vertical then
+    tnsr = tnsr:t()
   end
-  
-  local str  = ''
+
+  ---- Construct string representation
+  local count, str = 0, ''
   for row = 1, nRow do
     for col = 1, nCol do  
-     str = str .. string.format(config.format, tnsr[row][col])
-     if col < nCol then str = str .. config.delim .. ' ' end
+      if count < N then
+        str = str .. string.format(config.format, tnsr[row][col])
+        if col < nCol then str = str .. config.delim .. ' ' end
+      end
+     count = count + 1
     end
     if row < nRow then str = str .. '\n' end
   end
@@ -415,7 +495,9 @@ function utils.nanop(op, tnsr, axis, res)
   end
 
   -------- Base case
-  return op(tnsr:index(1, tnsr:eq(tnsr):nonzero():squeeze()))
+  local idx = tnsr:eq(tnsr):nonzero()
+  idx = idx:resize(idx:nElement())
+  return op(tnsr:index(1, idx))
 end
 
 --------------------------------
@@ -425,7 +507,7 @@ function utils.cov(X, axis)
   local nDims = X:dim()
   assert(nDims == 2) -- temp hack
   local axis  = axis or 2
-  local dim   = (axis + 1) % nDims
+  local dim   = 1 + (axis % 2)
   local cov   = X - X:mean(dim):expandAs(X)
   if (axis == 2) then
     cov = torch.mm(cov:t(), cov)
@@ -445,15 +527,15 @@ function utils.cross_cov(X, Z, axis)
     assert(X:dim() == 2) -- temp hack
     assert(Z:dim() == 2)
     local axis = axis or 2
-    local dim  = (axis + 1) % nDims
+    local dim  = 1 + (axis % 2)
     local cov
     if (axis == 2) then
       cov = torch.mm((X - X:mean(dim):expandAs(X)):t(), Z - Z:mean(dim):expandAs(Z))
      else
       cov = torch.mm(X - X:mean(dim):expandAs(X), (Z - Z:mean(dim):expandAs(Z)):t())
     end
+    return cov:div(X:size(dim))
   end
-  return cov:div(X:size(dim))
 end
 
 --------------------------------

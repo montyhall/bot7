@@ -5,7 +5,7 @@
 Abstact base class for bot7 bots.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-10-11
+Modified: 2015-10-25
 --]]
 
 ---------------- External Dependencies
@@ -42,7 +42,6 @@ function bot:__init(config, objective, cache)
   if self.responses then 
     self.best['y'], self.best['t'] = self.responses:min(1)
   else
-    self.best['y'] = torch.Tensor(config.yDim):fill(math.huge)
     self.best['t'] = -torch.ones(1)
   end
 
@@ -54,12 +53,14 @@ function bot:configure(config)
 
   ---------------- Default Settings
   -------- Bot
-  config['verbose']  = config.verbose or 3
-  config['budget']   = config.budget or 100
-  config['msg_freq'] = config.msg_freq or 1
-  config['nInitial'] = config.nInitial or 2
-  config['nSamples'] = config.nSamples or 10
-  config['save']     = config.save or false
+  local bot       = config.bot or {}
+  bot['verbose']  = bot.verbose or 3
+  bot['budget']   = bot.budget or 100
+  bot['msg_freq'] = bot.msg_freq or 1
+  bot['nInitial'] = bot.nInitial or 2
+  bot['nSamples'] = bot.nSamples or 10
+  bot['save']     = bot.save or false
+  config['bot']   = bot
 
   local score        = config.score or {}
   score['type']      = score.type or 'expected_improvement'
@@ -113,7 +114,7 @@ function bot:run_trial()
     utils.steal(self.observed, self.pending, torch.LongTensor{idx})
 
   -------- Initialize model w/ values
-  if self.model and self.nTrials == self.config.nInitial then
+  if self.model and self.nTrials == self.config.bot.nInitial then
     self.model:init(self.observed, self.responses)
   end
 
@@ -123,7 +124,7 @@ end
 
 function bot:run_experiment()
   local x, y
-  for t = 1, self.config.budget do
+  for t = 1, self.config.bot.budget do
     -------- Perform a single trial 
     x, y = self:run_trial()
 
@@ -138,7 +139,7 @@ function bot:run_experiment()
 end
 
 function bot:update_best(x, y)
-  if self.best.y:gt(y):all() then
+  if not self.best.y or self.best.y:gt(y):all() then
     self.best.t = self.nTrials
     self.best.x = x
     self.best.y = y
@@ -146,34 +147,18 @@ function bot:update_best(x, y)
 end
 
 function bot:progress_report(t, x, y)
-  if t % self.config.msg_freq == 0 then
+  if t % self.config.bot.msg_freq == 0 then
     local config = self.config
     -------- Print Levels < 1 
-    if config.verbose < 1 then return end
+    if config.bot.verbose < 1 then return end
 
-    local msg = string.format('Trial: %d of %d', t, config.budget)
+    local msg = string.format('Trial: %d of %d', t, config.bot.budget)
     print('================================================')
     print(string.rep(' ', 48-msg:len()).. msg)
     print('================================================')
 
-    local nHyp = x:nElement()
-          xCol = math.ceil(math.sqrt(nHyp))
-          xRow = math.ceil(nHyp/ xCol)
-    local nObs = y:nElement()
-          yCol = math.ceil(math.sqrt(nObs))
-          yRow = math.ceil(nObs/ yCol)
-
-    local y, best_y = y, self.best.y
-    if yCol*yRow > nObs then
-      local pad = torch.Tensor(yCol*yRow - nObs):fill(0/0)
-      y, best_y = torch.cat(y, pad, 1), torch.cat(best_y, pad, 1)
-    else
-      y, best_y = y:clone(), best_y:clone()
-    end
-    y:resize(yCol, yRow); best_y:resize(yCol, yRow)
-
     -------- Print Level 1
-    if config.verbose == 1 then
+    if config.bot.verbose == 1 then
       print(string.format('> Best response (#%d):', utils.as_val(self.best.t)))
       print(utils.tnsr2str(best_y) ..'\n')
       print('> Most recent:')
@@ -182,23 +167,13 @@ function bot:progress_report(t, x, y)
     end
 
     -------- Print Levels 2
-    local x, best_x = x, self.best.x
-    if xCol*xRow > nHyp then
-      local pad = torch.Tensor(xCol*xRow - nHyp):fill(0/0)
-      x, best_x = torch.cat(x, pad, 1), torch.cat(best_x, pad, 1)
-    else
-      x, best_x = x:clone(), best_x:clone()
-    end
-    x:resize(xCol, xRow)
-    best_x:resize(xCol, xRow)
-
     print(string.format('> Best seen (#%d):', utils.as_val(self.best.t)))
-    print('Response:\n' .. utils.tnsr2str(best_y) .. '\n')
-    print('Hypers:\n' .. utils.tnsr2str(best_x))
+    print('Response:\n' .. utils.tnsr2str(self.best.y) .. '\n')
+    print('Hypers:\n' .. utils.tnsr2str(self.best.x))
 
     print('\n> Most recent:')
     print('Response:\n' .. utils.tnsr2str(y) .. '\n')
-    if config.verbose == 2 then return end
+    if config.bot.verbose == 2 then return end
 
     -------- Print Level 3
     print('Hypers:\n' .. utils.tnsr2str(x))

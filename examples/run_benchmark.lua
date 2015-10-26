@@ -5,7 +5,7 @@
 Bayesian Optimization of benchmarking functions.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-10-10
+Modified: 2015-10-26
 --]]
 
 ---------------- External Dependencies
@@ -32,26 +32,13 @@ cmd:option('-xDim',       100,'specify input dimensionality for experiment')
 cmd:option('-yDim',       1,'specify output dimensionality for experiment')
 cmd:option('-noisy',      false, 'specify observations as noisy')
 cmd:option('-grid_size',  20000, 'specify size of candidate grid')
+cmd:option('-grid_type',  'random', 'specify type for candidate grid')
 cmd:option('-mins', '',   'specify minima for inputs (defaults to 0.0)')
 cmd:option('-maxes',      '', 'specify maxima for inputs (defaults to 1.0)')
 cmd:option('-score',      'ei', 'specify acquisition function to be used by bot; {ei, ucb}')
 
 cmd:text()
 opt = cmd:parse(arg or {})
-
----------------- Experiment Configuration
-local expt = 
-{  
-
-  bot      = opt.bot,
-  func     = opt.benchmark,
-  nInitial = opt.nInitial,
-  budget   = opt.budget,
-  xDim     = opt.xDim,
-  yDim     = opt.yDim,
-  model    = {noiseless = not opt.noisy},
-  grid     = {size = opt.grid_size}
-}
 
 ---- Manual override xDim for experiment
 if     (opt.benchmark == 'braninhoo') then
@@ -61,31 +48,46 @@ elseif (opt.benchmark == 'hartmann3') then
 elseif (opt.benchmark == 'hartmann6') then
   opt.xDim = 6
 end
-expt.xDim, expt.grid['xDim'] = opt.xDim, opt.xDim
 
----- Establish minimia/maxima
+---------------- Experiment Configuration
+local expt = 
+{
+  xDim   = opt.xDim,
+  yDim   = opt.yDim,
+  budget = opt.budget,
+}
+
+expt.model = {noiseless = not opt.noisy} 
+expt.grid  = {type = opt.grid_type, size = opt.grid_size}
+expt.bot   = {type = opt.bot, nInitial = opt.nInitial}
+
+---- Establish feasible hyperparameter ranges
 if (opt.mins ~= '') then
-  loadstring('opt.mins='..opt.mins)()
+  loadstring('expt.mins='..opt.mins)()
 else
-  opt.mins = torch.zeros(1, opt.xDim)
-  expt.grid.mins = opt.mins
+  expt.mins = torch.zeros(1, opt.xDim)
 end
 
 if (opt.maxes ~= '') then
   loadstring('opt.maxes='..opt.maxes)()
 else
-  opt.maxes = torch.ones(1, opt.xDim)
-  expt.grid.maxes = opt.maxes
+  expt.maxes = torch.ones(1, opt.xDim)
 end
 
 ---- Choose acquistion function
 expt['score'] = {}
-if     (opt.score == 'ei') then
+if (opt.score == 'ei') then
   expt.score['type'] = 'expected_improvement'
 elseif (opt.score == 'ucb') then
   expt.score['type'] = 'confidence_bound'
 end
 
+---- Set metatables
+for key, val in pairs(expt) do
+  if type(val) == 'table' then
+    setmetatable(val, {__index = expt})
+  end
+end
 
 ------------------------------------------------
 --                                 run_benchmark
@@ -94,10 +96,10 @@ function run_benchmark(expt)
 
   -------- Initialize bot
   local bot
-  if expt.bot == 'bo' then
-    bot = bot7.bots.bayesopt(expt, benchmarks[expt.func])
-  elseif expt.bot == 'rs' then
-    bot = bot7.bots.random_search(expt, benchmarks[expt.func])
+  if expt.bot.type == 'bo' then
+    bot = bot7.bots.bayesopt(expt, benchmarks[opt.benchmark])
+  elseif expt.bot.type == 'rs' then
+    bot = bot7.bots.random_search(expt, benchmarks[opt.benchmark])
   else
     print('Error: Unrecognized bot specified; aborting...')
     return

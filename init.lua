@@ -17,11 +17,10 @@ Package Listing:
   ----------------------------------------
 
 To Do:
-  - Neural net demos
   - TPE implementation
 
 Authored: 2015-09-28 (jwilson)
-Modified: 2015-10-10
+Modified: 2015-10-26
 --]]
 
 ------------------------------------------------
@@ -32,7 +31,9 @@ bot7 = {} -- leaks a global called bot7
 --------------------------------
 --            Standalone Modules
 --------------------------------
-bot7['utils'] = require('bot7.utils')
+bot7['utils']    = require('bot7.utils')
+bot7['automate'] = require('bot7.automate')
+include('hyperparam.lua')
 
 --------------------------------
 --                 Class Modules
@@ -42,5 +43,6 @@ require('bot7.grids')
 require('bot7.scores')
 require('bot7.samplers')
 require('bot7.bots')
+require('bot7.nnTools')
 
 return bot7

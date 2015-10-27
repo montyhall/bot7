@@ -14,7 +14,7 @@ Args:
               modules (i.e. elements of expt should occur
               as pointers)
   hypers  : Table of hyperparameter objects; see 
-              bot7.hyperparameter for details
+              hyperparam.lua for details
 
 Optional Table Arguments (targs):
   trainer : method for training a model from start to 
@@ -36,7 +36,7 @@ Expects data to be passed in as:
   ------------------------------
 
 Authored: 2015-10-15 (jwilson)
-Modified: 2015-10-26
+Modified: 2015-10-27
 --]]
 
 ---------------- External Dependencies
@@ -68,6 +68,23 @@ local automate = function(data, expt, hypers, targs)
   local nHypers = utils.tbl_size(hypers)
   expt.xDim   = nHypers
 
+  -------- Auxiliary method for extracting response value(s)
+  local aux = {}
+  aux.extract = function(vals, priority)
+    local priority = priority or {'err', 'loss'}
+    local vtype = type(vals)
+    if vtype == 'number' then
+      return vals
+    elseif vtype == 'table' then
+      for k = 1, utils.tbl_size(priority) do
+        local val = aux.extract(vals[priority[k]])
+        if type(val) == 'number' then return val end
+      end
+    elseif torch.isTensor(vals) then
+      return vals:storage()[1] -- hack
+    end
+  end
+
   local wrapper = function(vals)
     -------- Overwrite expt using values in hyp
     local env = {_G=_G, expt=expt, data=data, targs=targs} -- make visable
@@ -87,11 +104,9 @@ local automate = function(data, expt, hypers, targs)
     end
 
     -------- Build & Train Neural Network
-    local network  = builder(expt.network, data)
+    local network  = builder(expt.model, data)
     local response = trainer(network, data, expt)
-
-    -------- Return response measure in first position
-    return response:storage()[1] -- hack
+    return aux.extract(response)
   end
 
   local bot = targs.bot or bots[expt.bot.type](expt, wrapper)

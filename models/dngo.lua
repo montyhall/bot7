@@ -11,7 +11,7 @@ Target Article:
 Neural Networks" (Snoek et. al 2015)
 
 Authored: 2015-09-30 (jwilson)
-Modified: 2015-10-25
+Modified: 2015-10-27
 --]]
 
 ---------------- External Dependencies
@@ -52,14 +52,13 @@ function dngo:init(X, Y)
 
   -------- Construct model (if necessary)
   if not self.network then
-    self.network = nnTools.builder(config.network, data)
-    -- self.network = self:build(X, Y, config.network)
+    self.network = nnTools.builder(config.model, data)
   end
+  local network = self.network
 
   -------- Update network; do first to ensure tensor shapes
-  nnTools.trainer(self.network, data, config.init or config.update,
+  nnTools.trainer(network, data, config.init or config.update,
                   self.optimizer, self.criterion, self.state)
-  -- self:update(X, Y, config.init or config.update)
 
   -------- Initialize predictor
   if not self.predictor then 
@@ -69,7 +68,6 @@ function dngo:init(X, Y)
   end
 
   -------- Find basis layer
-  local network     = self.network
   local basis_layer = config.basis_layer 
   local idx, count  = network:size(), 0
   local position    = 1 -- measured from last
@@ -112,19 +110,30 @@ function dngo:predict(X0, Y0, X1, hyp, req, skip)
   local Z1 = torch.DoubleTensor(N1, config.zDim)
   local x  = torch.Tensor(batchsize, xDim) 
 
-  
-  -- if not skip then self:update(X0, Y0) end
   -------- Update network / basis function
   if not skip then
-    local config = config.update
-    local res = nnTools.trainer(self.network, {xr=X0, yr=Y0}, config, 
-                    self.optimizer, self.criterion, self.state)
-    print(string.format('Network MSE: %.2e', res[{1,1}]))
+    local criterion = self.criterion
+    local optimizer = self.optimizer
+    local verbose   = config.verbose or 0
 
-    local nEvals = self.state.evalCounter
-    local lRate  = config.optimizer.learningRate/
-                    (1 + nEvals*config.optimizer.learningRateDecay)
-    print(string.format('Learning Rate: %.2E, nEvals: %d',lRate, nEvals))
+    ---- Network error prior to update
+    local info, theta0, theta1 = {pre={}}
+    if verbose > 2 then
+      info.pre['loss'], info.pre['err'] = nnTools.evaluator(network, criterion, X0, Y0)
+      if verbose > 3 then
+        theta0, _ = self.network:getParameters(); theta0 = theta0:clone()
+      end
+    end
+
+    ---- Network Update
+    info.post = nnTools.trainer(network, {xr=X0, yr=Y0}, config.update, optimizer, criterion, self.state)
+
+    if verbose > 3 then 
+      theta1, _  = self.network:getParameters()
+      info['dw'] = theta1:dist(theta0)
+      theta0, theta1 = nil, nil
+    end
+    self:report(info)
   end
   network:evaluate()
   
@@ -146,57 +155,59 @@ function dngo:predict(X0, Y0, X1, hyp, req, skip)
     Z1:sub(tail, head):copy(self.basis.output)
   end
 
+  collectgarbage()
   return predictor:predict(Z0, Y0, Z1, nil, hyp, req)
 end
 
--- function dngo:update(X, Y, config)
---   -------- Local aliases
---   local config    = config or self.config.update
---   local network   = self.network
---   local criterion = self.criterion
---   local optimizer = self.optimizer
---   local W, grad   = network:getParameters()
---   local batchsize = config.batchsize
+function dngo:report(info)
+  local pre  = info.pre or {}
+  local post = info.post or {}
+  local dW   = info.dw
+  local msg  = {}
 
---   -------- Shape information
---   local N    = X:size(1)
---   local xDim = X:size(2)
---   local yDim = Y:size(2)
-  
---   -------- Tensor preallocation
---   local inputs  = torch.Tensor(batchsize, xDim)
---   local targets = torch.Tensor(batchsize, yDim)
+  -------- Learning Rate
+  if self.config.verbose and self.config.verbose > 2 then
+    local lRate  = self.config.update.optimizer.learningRate/
+        (1 + self.state.evalCounter*self.config.update.optimizer.learningRateDecay)
+    msg[1] = string.format('> Step-size: %.2E',lRate)
+  end
 
---   local nEvals = config.evalCounter or 0
---   local lRate  = config.learningRate/(1 + nEvals*config.learningRateDecay)
---   print(string.format('Learning Rate: %.2E, nEvals: %d',lRate, nEvals))
+  -------- l2-Norm of gradient
+  if dW then
+    msg[2] = string.format('> Norm ||dW||: %.2e', dW)
+  end
 
---   -------- Functional closure 
---   local closure = function(x)
---     if x ~= W then W:copy(x) end
---     grad:zero() -- reset grads
---     local outputs = network:forward(inputs) -- fprop
---     local fval    = criterion:forward(outputs, targets)
---     local df_dw   = criterion:backward(outputs, targets)
---     network:backward(inputs, df_dw) -- bprop
---     fval = fval/batchsize
---     return fval, grad
---   end
+  -------- Classification Error
+  if post.err then
+    msg[3] = string.format(' %.2e', post.err[{1,1}])
+  end
 
---   -------- Main training loop
---   -- config.evalCounter = 0 -- reset evalCounter?
---   network:training()
---   local order, idx, head, size
---   for epoch = 1, config.nEpochs do
---     order = torch.randperm(N, 'torch.LongTensor')
---     head  = 0
---     for tail = 1, N, batchsize do
---       head = math.min(head + batchsize, N)
---       size = head-tail+1
---       idx  = order:sub(tail, head)
---       inputs:resize(size,xDim):copy(X:index(1, idx))
---       targets:resize(size,yDim):copy(Y:index(1, idx))
---       optimizer(closure, W, config)
---     end
---   end
--- end
+  if pre.err then
+    if msg[3] then msg[1] = ' =>' .. msg[3] end
+    msg[3] = string.format(' %.2e', pre.err) .. msg[3]
+  end
+
+  if msg[3] then
+    msg[3] = '> Classif. Error:' .. msg[1]
+  end
+
+  -------- Loss on training set
+  if post.loss then
+    msg[4] = string.format(' %.2e', post.loss[{1,1}])
+  end
+
+  if pre.loss then
+    if msg[4] then msg[4] =  ' =>' .. msg[4] end
+    msg[4] = string.format(' %.2e', pre.loss) .. msg[4]
+  end
+
+  if msg[4] then
+    msg[4] = '> Training Loss:' .. msg[4]
+  end
+
+  -------- Printing
+  if utils.tbl_size(msg) > 0 then
+    utils.printSection('DNGO Update Report', {width=32})
+    for k = 1, 4 do if msg[k] then print(msg[k]) end end
+  end
+end

@@ -5,7 +5,7 @@
 Utility methods for bot7.
 
 Authored: 2015-09-12 (jwilson)
-Modified: 2015-10-25
+Modified: 2015-10-27
 --]]
 
 ---------------- External Dependencies
@@ -69,39 +69,45 @@ end
 --------------------------------
 --          Print section header
 --------------------------------
-function utils.printSection(str, width, timetamp)
+function utils.printSection(str, config)
   if not os then require 'os' end
+  local config   = config or {}
 
-  local str      = str   or ''
-  local width    = width or 48
-  local time     = timestamp or (timestamp==nil)
-  local delim_r  = ' |'
-  local delim_l  = '| '
-  local barStyle = '='
-  local barReps  = width / barStyle:len()
+  local str    = str   or ''
+  local width  = config.width or 48
+  local tstamp = config.timestamp or config.time or 'auto'
+  local rdelim = config.ldelim or config.delim or ''
+  local ldelim = config.rdelim or config.delim or ''
+  local bar    = config.bar or '='
 
-  local message   = delim_l
-  local strLength = delim_l:len() + delim_r:len() + str:len()
-  if timestamp then
-    timestamp = os.date("%d/%m - %H:%M%p ")
-    strLength = strLength + timestamp:len()
-    message   = message .. timestamp
+  local msg = ldelim
+  local len = ldelim:len() + rdelim:len() + str:len()
+  if tstamp then
+    local time = os.date("%d/%m - %H:%M%p ")
+    local tlen = time:len()
+    if tstamp == true or tstamp == 'auto' and len+tlen <= width then
+      len = len + tlen
+      msg = msg .. time
+    end
   end
+  local reps   = width / bar:len()
 
-  message = '\n' .. string.rep(barStyle, barReps) ..
-            '\n' .. message .. string.rep(' ', width - strLength).. str .. delim_r
-            '\n' .. string.rep(barStyle, barReps)
+  msg = '\n' .. string.rep(bar, reps) ..
+        '\n' .. msg .. string.rep(' ', width - len).. str .. rdelim ..
+        '\n' .. string.rep(bar, reps)
 
-  print(message)
+  print(msg)
 end
 
 --------------------------------
 --   Print command line argument
 --------------------------------
 function utils.printArgs()
+  local nArgs = #arg
+  if nArgs == 0 then return end
   utils.printSection('Command Line Arguments:', 32)
   local count,k = 0, 0
-  while k < #arg do
+  while k < nArgs do
     count, k = count+1, k+1
     if arg[k] ~= '-verbose' then
       if k < #arg and arg[k+1]:sub(1,1) ~= '-' then

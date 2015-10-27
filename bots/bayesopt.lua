@@ -5,7 +5,7 @@
 Bayesian Optimization bot class for bot7.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-10-25
+Modified: 2015-10-27
 --]]
 
 ---------------- External Dependencies

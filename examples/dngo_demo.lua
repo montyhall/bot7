@@ -75,23 +75,23 @@ expt.model = {output=''} -- necessary for regression setting!
 
 ---- Network Initialization Settings
 local init        = expt.init or {}
-init['schedule']  = {nEpochs=100, batchsize=32}
+init['schedule']  = {nEpochs=100, batchsize=32, corruption={degree=0.2}}
 init['optimizer'] = 
 {
   type              = 'sgd',
   learningRate      = 1e-2,
   learningRateDecay = 1e-3,
   weightDecay       = 1e-4,
-  momentum          = 0.0,
+  momentum          = 0.9,
 }
 expt['init'] = init
 
 ---- Network Update Settings
 local update = expt.update or utils.deepcopy(expt.init)
 update.schedule.nEpochs = 100
-update.optimizer.weightDecay  = 1e-3
+update.optimizer.weightDecay  = 5e-4
 update.optimizer.learningRate = 1e-2
-update.optimizer.learningRateDecay = 1e-4
+update.optimizer.learningRateDecay = 5e-5
 expt['update'] = update
 
 ---- Establish feasible hyperparameter ranges

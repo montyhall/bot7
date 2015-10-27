@@ -83,7 +83,7 @@ else
     hyperparam('expt.optimizer.weightDecay', 1e-7, 1e-2),
     hyperparam('expt.optimizer.momentum', 0, 1),
     hyperparam('expt.model.dropout', 0, 1),
-    hyperparam('expt.schedule.corruption', 0, 0.5),
+    hyperparam('expt.schedule.corruption.degree', 0, 0.5),
   }
 end
 

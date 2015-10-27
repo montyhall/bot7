@@ -128,13 +128,43 @@ local trainer = function(network, data, config, optimizer, criterion, state)
     end
   end
 
-  -------- Feature Corruption (Blankout noise)
+  -------- Explicit Feature Corruption (regularizer)
   local corrupt = function(x)
-    if config.gpu then 
-      return x:cmul(torch.rand(x:size()):gt(sched.corruption):cuda())
-    else
-      return torch.cmul(x, torch.rand(x:size()):gt(sched.corruption):type(x:type()))
+    local config, ttype = sched.corruption, x:type()
+    local degree, std   = config.degree, config.std
+    if (degree > 0  or std > 0) and (not config.type) then
+      config.type = 'gaussian'
     end
+
+    if config.type == 'blankout' then
+      if config.gpu then 
+        return x:cmul(torch.rand(x:size()):gt(degree):cuda())
+      else
+        return torch.cmul(x, torch.rand(x:size()):gt(degree):type(ttype))
+      end
+
+    elseif config.type == 'gaussian' then
+      if not std and degree then
+        if type(degree) == 'number' then
+          std = data.xr:std(1):mul(degree):expandAs(x)
+        else
+          std = data.xr:std(1):cmul(degree):expandAs(x)
+        end
+      elseif type(std) == 'number' then 
+        std = torch.Tensor{{std}}:type(ttype):expand(x:size(2), 1)
+      end
+
+      if config.gpu then 
+        return x:add(torch.randn(x:size()):cuda():cmul(std))
+      else
+        return torch.add(x, torch.randn(x:size()):type(ttype):cmul(std))
+      end
+    else
+      print('Error: Unrecognized noise distribution '..
+            'specified; skipping feature corruption...')
+      return
+    end
+
   end
 
   -------- Functional Closure (for optimizer)
@@ -146,7 +176,7 @@ local trainer = function(network, data, config, optimizer, criterion, state)
     local fval  = criterion:forward(outputs, targets)
     local df_dw = criterion:backward(outputs, targets) -- ~= df/dW
     network:backward(inputs, df_dw)
-    fval = fval/targets(1)
+    fval = fval/targets:size(1)
     return fval, grad
   end
 
@@ -164,7 +194,7 @@ local trainer = function(network, data, config, optimizer, criterion, state)
       inputs, targets = get_batch(idx, suffix)
 
       ---- Feature Corruption (Blankout noise)
-      if sched.corruption and sched.corruption > 0 then
+      if sched.corruption then
         inputs = corrupt(inputs)
       end
 

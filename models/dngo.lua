@@ -126,7 +126,9 @@ function dngo:predict(X0, Y0, X1, hyp, req, skip)
     end
 
     ---- Network Update
-    info.post = nnTools.trainer(network, {xr=X0, yr=Y0}, config.update, optimizer, criterion, self.state)
+    self.state.dfdx:mul(0.5) -- dampen momentum
+    info.post = nnTools.trainer(network, {xr=X0, yr=Y0}, config.update, 
+                                optimizer, criterion, self.state)
 
     if verbose > 3 then 
       theta1, _  = self.network:getParameters()

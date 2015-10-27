@@ -5,7 +5,7 @@
 Abstact base class for bot7 bots.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-10-25
+Modified: 2015-10-27
 --]]
 
 ---------------- External Dependencies
@@ -153,9 +153,7 @@ function bot:progress_report(t, x, y)
     if config.bot.verbose < 1 then return end
 
     local msg = string.format('Trial: %d of %d', t, config.bot.budget)
-    print('================================================')
-    print(string.rep(' ', 48-msg:len()).. msg)
-    print('================================================')
+    utils.printSection(msg)
 
     -------- Print Level 1
     if config.bot.verbose == 1 then

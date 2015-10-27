@@ -10,7 +10,7 @@ Neural Networks" (Snoek et. al 2015)
 
 
 Authored: 2015-09-30 (jwilson)
-Modified: 2015-10-26
+Modified: 2015-10-27
 --]]
 
 ---------------- External Dependencies
@@ -27,7 +27,7 @@ local benchmarks = paths.dofile('benchmarks/init.lua')
 cmd = torch.CmdLine()
 cmd:text()
 cmd:text('Options:')
-cmd:option('-verbose',   1, 'specify which print level')
+cmd:option('-verbose',   3, 'specify which print level')
 cmd:option('-bot',       'bo', 'specify which bot to use: {bo, rs}')
 cmd:option('-benchmark', 'hartmann6', 'specify which function to optimize')
 cmd:option('-msg_freq',  1, 'interval between progress reports (in terms of epochs)')
@@ -66,32 +66,32 @@ local expt =
   yDim   = opt.yDim,
   budget = opt.budget,
   msg_freq = opt.msg_freq,
+  verbose  = opt.verbose
 }
 
-expt.bot  = {type = opt.bot, nInitial = opt.nInitial}
-expt.grid = {type = opt.grid_type, size = opt.grid_size}
-
+expt.bot   = {type = opt.bot, nInitial = opt.nInitial}
+expt.grid  = {type = opt.grid_type, size = opt.grid_size}
+expt.model = {output=''} -- necessary for regression setting!
 
 ---- Network Initialization Settings
 local init        = expt.init or {}
 init['schedule']  = {nEpochs=100, batchsize=32}
-init['criterion'] = {type = 'MSECriterion'}
 init['optimizer'] = 
 {
   type              = 'sgd',
   learningRate      = 1e-2,
   learningRateDecay = 1e-3,
-  weightDecay       = 1e-5,
-  momentum          = 9e-1,
+  weightDecay       = 1e-4,
+  momentum          = 0.0,
 }
 expt['init'] = init
 
 ---- Network Update Settings
 local update = expt.update or utils.deepcopy(expt.init)
 update.schedule.nEpochs = 100
-update.optimizer.weightDecay  = 1e-4
-update.optimizer.learningRate = 1e-3
-update.optimizer.learningRateDecay = 0
+update.optimizer.weightDecay  = 1e-3
+update.optimizer.learningRate = 1e-2
+update.optimizer.learningRateDecay = 1e-4
 expt['update'] = update
 
 ---- Establish feasible hyperparameter ranges
@@ -111,7 +111,7 @@ end
 expt['score'] = {}
 if (opt.score == 'ei') then
   expt.score['type'] = 'expected_improvement'
-elseif (opt.score == 'ucb') then
+elseif (opt.score == 'ucb' or opt.score == 'lcb') then
   expt.score['type'] = 'confidence_bound'
 end
 

@@ -5,7 +5,7 @@
 Utility methods for bot7.
 
 Authored: 2015-09-12 (jwilson)
-Modified: 2015-10-27
+Modified: 2015-10-28
 --]]
 
 ---------------- External Dependencies
@@ -26,6 +26,7 @@ local utils = {}
 --------------------------------
 utils.find     = require('pl.tablex').find
 utils.deepcopy = require('pl.tablex').deepcopy
+
 
 --------------------------------
 --                    Table size
@@ -67,61 +68,6 @@ function utils.tbl_update(res, src, keep)
 end
 
 --------------------------------
---          Print section header
---------------------------------
-function utils.printSection(str, config)
-  if not os then require 'os' end
-  local config   = config or {}
-
-  local str    = str   or ''
-  local width  = config.width or 48
-  local tstamp = config.timestamp or config.time or 'auto'
-  local rdelim = config.ldelim or config.delim or ''
-  local ldelim = config.rdelim or config.delim or ''
-  local bar    = config.bar or '='
-
-  local msg = ldelim
-  local len = ldelim:len() + rdelim:len() + str:len()
-  if tstamp then
-    local time = os.date("%d/%m - %H:%M%p ")
-    local tlen = time:len()
-    if tstamp == true or tstamp == 'auto' and len+tlen <= width then
-      len = len + tlen
-      msg = msg .. time
-    end
-  end
-  local reps   = width / bar:len()
-
-  msg = '\n' .. string.rep(bar, reps) ..
-        '\n' .. msg .. string.rep(' ', width - len).. str .. rdelim ..
-        '\n' .. string.rep(bar, reps)
-
-  print(msg)
-end
-
---------------------------------
---   Print command line argument
---------------------------------
-function utils.printArgs()
-  local nArgs = #arg
-  if nArgs == 0 then return end
-  utils.printSection('Command Line Arguments:', 32)
-  local count,k = 0, 0
-  while k < nArgs do
-    count, k = count+1, k+1
-    if arg[k] ~= '-verbose' then
-      if k < #arg and arg[k+1]:sub(1,1) ~= '-' then
-        print(string.format('[%d]  %s \t %s',count, arg[k],arg[k+1]))
-        k = k+1
-      else
-        print(string.format('[%d]  %s',count, arg[k]))
-      end
-    end
-  end
-  print(' ')
-end
-
---------------------------------
 --              Tensor to String
 --------------------------------
 function utils.tnsr2str(tnsr, config)
@@ -139,11 +85,12 @@ function utils.tnsr2str(tnsr, config)
     return
   end
 
-  if nDims == 1 then
+  local N = tnsr:nElement()
+  if nDims == 1 or utils.shape(tnsr):max() == N then
     tnsr = tnsr:reshape(1, tnsr:nElement())
   end
 
-  local N, nRow, nCol = tnsr:nElement(), tnsr:size(1), tnsr:size(2)
+  local nRow, nCol = tnsr:size(1), tnsr:size(2)
 
   if (nDims > 2)  then
     if nRow*nCol == tnsr:nElement() then
@@ -188,6 +135,77 @@ function utils.tnsr2str(tnsr, config)
     if row < nRow then str = str .. '\n' end
   end
   return str
+end
+
+--------------------------------
+--          Print section header
+--------------------------------
+function utils.printSection(str, config)
+  if not os then require 'os' end
+  local config   = config or {}
+
+  local str     = str   or ''
+  local width   = config.width or 48
+  local tstamp  = config.timestamp or config.time
+  local rdelim  = config.ldelim or config.delim or ''
+  local ldelim  = config.rdelim or config.delim or ''
+  local ljust   = config.ljust or false
+  local newline = config.newline or config.newline == nil
+  local bar     = config.bar or '='
+
+  local msg  = ldelim
+  local len  = ldelim:len() + rdelim:len() + str:len()
+  local time = nil
+  if tstamp == nil then tstamp = 'auto' end
+  if tstamp then
+    time = os.date("%d/%m - %H:%M%p ")
+    local tlen = time:len()
+    if tstamp == true or (tstamp == 'auto' and len+tlen <= width) then
+      len = len + tlen
+    end
+  end
+
+  local reps = width/bar:len()
+  bar = string.rep(bar, reps)
+
+  if ljust then
+    msg = '\n' .. msg .. str .. string.rep(' ', width - len)
+    if time then msg = msg .. time end
+    msg = msg .. rdelim
+  else
+    if time then msg = msg .. time end
+    msg = '\n' .. msg .. string.rep(' ', width - len) .. str .. rdelim
+  end
+  
+  if newline then
+    msg = '\n' .. bar .. msg .. '\n' .. bar
+  else
+    msg = bar .. msg .. '\n' .. bar
+  end
+
+  print(msg)
+end
+
+--------------------------------
+--   Print command line argument
+--------------------------------
+function utils.printArgs()
+  local nArgs = #arg
+  if nArgs == 0 then return end
+  utils.printSection('Command Line Arguments:', 32)
+  local count,k = 0, 0
+  while k < nArgs do
+    count, k = count+1, k+1
+    if arg[k] ~= '-verbose' then
+      if k < #arg and arg[k+1]:sub(1,1) ~= '-' then
+        print(string.format('[%d]  %s \t %s',count, arg[k],arg[k+1]))
+        k = k+1
+      else
+        print(string.format('[%d]  %s',count, arg[k]))
+      end
+    end
+  end
+  print(' ')
 end
 
 --------------------------------
@@ -281,7 +299,7 @@ end
 --             Kronecker Product
 --------------------------------
 function utils.kron(X, Z, buffer)
-  assert(X:dim() == 2 and Z:dim() == 2) -- temp hack, should generalize this
+  assert(X:dim() == 2 and Z:dim() == 2) -- should generalize this
   local N, M = X:size(1), X:size(2)
   local P, Q = Z:size(1), Z:size(2)
   local K    = buffer or torch.Tensor(N*P, M*Q)
@@ -299,9 +317,21 @@ end
 --------------------------------
 function utils.modulus(val, base)
   local typ = val:type()
-  return torch.add(val:double(), -base, torch.floor(torch.mul(val:double(), 1/base))):type(typ)
+  return torch.add(val:double(), -base, 
+    torch.floor(torch.mul(val:double(), 1/base))):type(typ)
 end
 
+--------------------------------
+--                     Factorial
+--------------------------------
+function utils.factorial(x)
+  local res = utils.as_val(x)
+  local val = res - 1
+  while val > 0 do
+    res = res * val
+  end
+  return res
+end
 
 --------------------------------
 --              Tensor Transpose
@@ -343,7 +373,7 @@ function utils.linear_index(shape, coords, order)
 
   local coords = coords
   if (coords:dim() == 1) then
-    coords = coords:clone():resize(coords:nElement(), 1)
+    coords = coords:reshape(coords:nElement(), 1)
   end
 
   local offset
@@ -476,10 +506,10 @@ end
 --------------------------------
 function utils.nanop(op, tnsr, axis, res)
   local axis = axis or 0
-  
+
   -------- Special Case: Operate over all axis
   if axis == 0 then
-    tnsr = tnsr:clone():resize(tnsr:nElement())
+    tnsr = tnsr:reshape(tnsr:nElement())
   end
   local nDims = tnsr:dim()
 
@@ -501,9 +531,60 @@ function utils.nanop(op, tnsr, axis, res)
   end
 
   -------- Base case
-  local idx = tnsr:eq(tnsr):nonzero()
-  idx = idx:resize(idx:nElement())
-  return op(tnsr:index(1, idx))
+  return op(tnsr:index(1, tnsr:eq(tnsr):nonzero():squeeze()))
+end
+
+
+--------------------------------
+--               Jitter Cholesky
+--------------------------------
+function utils.chol(src, uplo, config, res)
+  ---- Local Variables
+  local uplo = uplo or 'L'
+  local res  = res or torch.Tensor(src:size()):typeAs(src)
+  
+  local chol = function(src)
+    torch.potrf(res, src, uplo)
+  end
+
+  local status, err = pcall(chol, src)
+
+  ---- Jitter Routine
+  if status == false then
+    local config  = config or {}
+    local verbose = config.verbose or true
+    local max_eps = config.max_eps or src:norm()
+    local eps     = config.eps or 1e-8
+    local growth  = config.growth or 1.1
+    local I, itr  = torch.eye(src:size(1)), 0
+    local mask    = I:byte()
+
+    while(status == false) do
+      itr = itr + 1
+      if eps > max_eps then
+        I:maskedFill(mask, 1.0)
+        status, err = pcall(chol, I)
+      else
+        eps = eps * growth
+        I:maskedFill(mask, eps)
+        status, err = pcall(chol, torch.add(src, I))
+      end
+    end
+
+    if verbose then
+      local msg
+      if eps > max_eps then
+        msg = 'Warning: utils.chol failed to find a PSD version\n'..
+              'of the input matrix; returning chol(I).'
+      else
+        msg = string.format('Warning: utils.chol succeeded '..
+              'in factorizing the\ninput matrix after applying '..
+              'a jitter of %.2e', eps)
+      end
+      print(msg)
+    end
+  end
+  return res
 end
 
 --------------------------------
@@ -512,9 +593,9 @@ end
 function utils.cov(X, axis)
   local nDims = X:dim()
   assert(nDims == 2) -- temp hack
-  local axis  = axis or 2
-  local dim   = 1 + (axis % 2)
-  local cov   = X - X:mean(dim):expandAs(X)
+  local axis = axis or 2
+  local dim  = 1 + (axis % 2)
+  local cov  = X - X:mean(dim):expandAs(X)
   if (axis == 2) then
     cov = torch.mm(cov:t(), cov)
   else
@@ -540,8 +621,8 @@ function utils.cross_cov(X, Z, axis)
      else
       cov = torch.mm(X - X:mean(dim):expandAs(X), (Z - Z:mean(dim):expandAs(Z)):t())
     end
-    return cov:div(X:size(dim))
   end
+  return cov:div(X:size(dim))
 end
 
 --------------------------------
@@ -617,4 +698,3 @@ function utils.lognorm_logpdf(x)
 end
 
 return utils
-

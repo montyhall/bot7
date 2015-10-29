@@ -5,7 +5,7 @@
 Utility methods for bot7.
 
 Authored: 2015-09-12 (jwilson)
-Modified: 2015-10-28
+Modified: 2015-10-29
 --]]
 
 ---------------- External Dependencies
@@ -13,6 +13,7 @@ local math = require('math')
 
 ---------------- Constants
 local sqrt2_inv   = 1/math.sqrt(2)
+local sqrt2pi     = math.sqrt(2*math.pi)
 local sqrt2pi_inv = 1/math.sqrt(2*math.pi)
 local log2pi      = math.log(2*math.pi)
 
@@ -211,13 +212,31 @@ end
 --------------------------------
 --        Return target as value
 --------------------------------
--- NEEDS WORK
-function utils.as_val(x, idx)
-  local idx = idx or 1
+-- Needs work
+function utils.as_val(x, idx, axis)
   if torch.isTensor(x) then
-    return x:clone():storage()[idx] -- sloppy
+    local idx   = idx or 1
+    local shape = x:size()
+    local axis  = axis
+    if not axis then
+      axis = 1
+      while(shape[axis] < idx) do
+        axis = axis + 1
+      end
+    end
+    shape[axis] = idx
+    return x[shape]
   else
-    return x
+    local typ = type(x)
+    if typ == 'number' then
+      return x
+    elseif typ == table then
+      return utils.as_val(x[idx])
+    else
+      print('Error: Unrecognized input type '..
+            'encountered in utils.as_val(); '..
+            'returning.')
+    end
   end
 end
 
@@ -552,12 +571,15 @@ function utils.chol(src, uplo, config, res)
   ---- Jitter Routine
   if status == false then
     local config  = config or {}
-    local verbose = config.verbose or true
+    local verbose = config.verbose or 1
     local max_eps = config.max_eps or src:norm()
     local eps     = config.eps or 1e-8
     local growth  = config.growth or 1.1
     local I, itr  = torch.eye(src:size(1)), 0
     local mask    = I:byte()
+    local cleanup_freq = config.cleanup_freq or 1e2
+    local msg_freq     = config.msg_freq or 1e2
+
 
     while(status == false) do
       itr = itr + 1
@@ -569,9 +591,19 @@ function utils.chol(src, uplo, config, res)
         I:maskedFill(mask, eps)
         status, err = pcall(chol, torch.add(src, I))
       end
+
+      ---- Report status to user
+      if verbose > 0 and (itr-1) % msg_freq then
+        print(string.format('Iteration %d of jitter routine', itr))
+      end
+
+      ---- Cleanup periodically
+      if itr % cleanup_freq == 0 then
+        collectgarbage()
+      end
     end
 
-    if verbose then
+    if verbose > 0 then
       local msg
       if eps > max_eps then
         msg = 'Warning: utils.chol failed to find a PSD version\n'..
@@ -694,7 +726,7 @@ end
 --            Log-Normal Log-PDF
 --------------------------------
 function utils.lognorm_logpdf(x)
-  return torch.log(x):pow(2):mul(-0.5):add(x:clone():mul(-sqrt2pi_inv))
+  return torch.log(x):pow(2):mul(-0.5):add(-torch.mul(x, sqrt2pi):log())
 end
 
 return utils

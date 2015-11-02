@@ -2,9 +2,9 @@
 --                                      Preamble
 ------------------------------------------------
 --[[
-Convenience script for tuning the hyperparameters
-of a prespecified neural network architecture in
-Torch7.
+Convenience script for automated tuning of
+hyperparameters for a prespecified neural 
+network architecture in Torch7.
 
 Args:
   data    : target dataset(s)
@@ -36,15 +36,16 @@ Expects data to be passed in as:
   ------------------------------
 
 Authored: 2015-10-15 (jwilson)
-Modified: 2015-10-27
+Modified: 2015-11-02
 --]]
 
 ---------------- External Dependencies
-local paths = require('paths')
-local math  = require('math')
-local utils = require('bot7.utils')
-local bots  = require('bot7.bots')
-local nnTools = require('bot7.nnTools')
+local paths   = require('paths')
+local math    = require('math')
+local utils   = require('bot7.utils')
+local bots    = require('bot7.bots')
+local trainer = require('bot7.nnTools.trainer')
+local builder = require('bot7.nnTools.builder')
 
 ---------------- Constants
 local defaults = 
@@ -58,32 +59,42 @@ local defaults =
 }
 
 ------------------------------------------------
---                                      automate
+--                                     automator
 ------------------------------------------------
-local automate = function(data, expt, hypers, targs)
+local automator = function(data, expt, hypers, targs)
   local expt    = utils.tbl_update(expt, defaults, true)
   local targs   = targs or {}
-  local trainer = targs.trainer or nnTools.trainer
-  local builder = targs.builder or nnTools.builder
+  local trainer = targs.trainer or trainer
+  local builder = targs.builder or builder
   local nHypers = utils.tbl_size(hypers)
   expt.xDim   = nHypers
 
   -------- Auxiliary method for extracting response value(s)
   local aux = {}
-  aux.extract = function(vals, priority)
-    local priority = priority or {'err', 'loss'}
-    local vtype = type(vals)
-    if vtype == 'number' then
-      return vals
-    elseif vtype == 'table' then
-      for k = 1, utils.tbl_size(priority) do
-        local val = aux.extract(vals[priority[k]])
-        if type(val) == 'number' then return val end
-      end
-    elseif torch.isTensor(vals) then
-      return vals:storage()[1] -- hack
+  aux.extract = function(vals, target)
+  
+    ---- Determine target measure(s)
+    local target = target
+    local ttype = type(target)
+    if ttype == 'nil' then 
+      target = {'err', 'loss'}
+    elseif ttype == 'string' or ttype == 'number' then
+      target = {target} 
+    else 
+      print('Error: nnTools.automator encountered an '..
+            'unrecognized target type; returning...')
     end
+
+    ---- Extract value(s)
+    local vtype = type(vals)
+    if vtype == 'table' then
+      for idx, key in pairs(target) do
+        if vals[key] then return aux.extract(vals[key]) end
+      end
+    end
+    return utils.as_val(vals, 1)
   end
+    
 
   local wrapper = function(vals)
     -------- Overwrite expt using values in hyp
@@ -106,11 +117,11 @@ local automate = function(data, expt, hypers, targs)
     -------- Build & Train Neural Network
     local network  = builder(expt.model, data)
     local response = trainer(network, data, expt)
-    return aux.extract(response)
+    return aux.extract(response, targs.target)
   end
 
   local bot = targs.bot or bots[expt.bot.type](expt, wrapper)
   return bot:run_experiment()
 end
 
-return automate
+return automator

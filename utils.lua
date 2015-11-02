@@ -5,7 +5,7 @@
 Utility methods for bot7.
 
 Authored: 2015-09-12 (jwilson)
-Modified: 2015-10-29
+Modified: 2015-11-02
 --]]
 
 ---------------- External Dependencies
@@ -212,15 +212,15 @@ end
 --------------------------------
 --        Return target as value
 --------------------------------
--- Needs work
 function utils.as_val(x, idx, axis)
   if torch.isTensor(x) then
     local idx   = idx or 1
     local shape = x:size()
     local axis  = axis
+    local nDims = x:dim()
     if not axis then
       axis = 1
-      while(shape[axis] < idx) do
+      while((shape[axis] == 1 or shape[axis] < idx) and axis < nDims) do
         axis = axis + 1
       end
     end
@@ -474,8 +474,8 @@ end
 --             Pairwise Distance
 --------------------------------
 ---- Can this be sped up / improved upon?
-function utils.pdist(X, Z, p, lenscale, w_root)
-  local p    = p or 2
+function utils.pdist(X, Z, lenscale, w_root)
+  local p    = 2
   local dist = nil
 
   -------- Compute pairwise lp distance (w/o root)
@@ -550,7 +550,14 @@ function utils.nanop(op, tnsr, axis, res)
   end
 
   -------- Base case
-  return op(tnsr:index(1, tnsr:eq(tnsr):nonzero():squeeze()))
+  local idx = tnsr:eq(tnsr):nonzero()
+  local dim = idx:dim()
+  if dim == 0 then
+    return torch.Tensor(1):fill(0/0)
+  elseif dim > 1 then
+    idx:resize(idx:nElement())
+  end
+  return op(tnsr:index(1, idx))
 end
 
 

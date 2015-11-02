@@ -20,7 +20,7 @@ To Do:
   - TPE implementation
 
 Authored: 2015-09-28 (jwilson)
-Modified: 2015-10-26
+Modified: 2015-10-30
 --]]
 
 ------------------------------------------------
@@ -31,8 +31,7 @@ bot7 = {} -- leaks a global called bot7
 --------------------------------
 --            Standalone Modules
 --------------------------------
-bot7['utils']    = require('bot7.utils')
-bot7['automate'] = require('bot7.automate')
+bot7['utils'] = require('bot7.utils')
 include('hyperparam.lua')
 
 --------------------------------

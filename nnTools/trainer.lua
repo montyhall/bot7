@@ -17,7 +17,7 @@ Expects data to be passed in as:
   ------------------------------
 
 Authored: 2015-09-30 (jwilson)
-Modified: 2015-10-27
+Modified: 2015-11-02
 --]]
 
 ---------------- External Dependencies
@@ -31,7 +31,7 @@ local evaluator = require('bot7.nnTools.evaluator')
 local defaults = 
 {
   -------- User Interface
-  UI = {verbose=1, save=0, msg_freq=math.huge},
+  ui = {verbose=1, save=0, msg_freq=math.huge},
 
   -------- Training Schedule
   schedule = {gpu=false, nEpochs=100, batchsize=32},
@@ -60,11 +60,11 @@ local trainer = function(network, data, config, optimizer, criterion, state)
   if not config.schedule.eval_freq then
     config.schedule.eval_freq = config.schedule.nEpochs
   end
-  config.UI.msg_freq = math.max(config.UI.msg_freq, config.schedule.eval_freq)
+  config.ui.msg_freq = math.max(config.ui.msg_freq, config.schedule.eval_freq)
 
   local optimizer = optimizer or optim[config.optimizer.type]
   local criterion = criterion or nn[config.criterion.type]()
-  local UI, sched = config.UI, config.schedule
+  local UI, sched = config.ui, config.schedule
   local state     = state or {} -- state for optimizer
 
   -------- Shape Information
@@ -214,10 +214,16 @@ local trainer = function(network, data, config, optimizer, criterion, state)
       local t   = epoch / UI.msg_freq
       local msg = string.format('Epoch: %d of %d', epoch, sched.nEpochs)
       utils.printSection(msg)
-      local nRow = trace:size(2)
-      local prev = utils.nanop(torch.max, trace:select(2, nRow))
-      local idx  = trace:select(2, nRow):eq(prev):nonzero():storage()[1]
-      local loss = trace:select(1, idx)
+
+      local loss = trace.loss
+      local nCol = loss:size(2)
+      local prev = utils.nanop(torch.max, loss[{{}, nCol}])
+      local idx  = loss:select(2, nCol):eq(prev):repeatTensor(nCol, 1):t()
+      local loss = loss:maskedSelect(idx)
+      local err  = nil
+      if trace.err then 
+        err = trace.err:maskedSelect(idx)
+      end
       idx, msg = 1, ''
       for k = 1, nSets do
         if counts[suffix[k]] > 0 then 
@@ -226,7 +232,22 @@ local trainer = function(network, data, config, optimizer, criterion, state)
           idx = idx + 1
         end
       end
-      print(string.format('> Loss at epoch %d: %s', prev, msg))
+
+      if err then
+        print(string.format('> Loss  at epoch %d: %s', prev, msg))
+        idx, msg = 1, ''
+        for k = 1, nSets do
+          if counts[suffix[k]] > 0 then 
+            if msg ~= '' then msg = msg .. ' | ' end
+            msg = msg .. string.format('%.2e (%s)', err[idx], suffix[k]:upper())
+            idx = idx + 1
+          end
+        end
+        print(string.format('> Error at epoch %d: %s', prev, msg))
+      else
+        print(string.format('> Loss at epoch %d: %s', prev, msg))
+      end
+
       local nEvals = state.evalCounter or 0
       local lRate  = config.optimizer.learningRate/(1 + nEvals*config.optimizer.learningRateDecay)
       print(string.format('Learning Rate: %.2E',lRate))

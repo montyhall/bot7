@@ -21,7 +21,7 @@ To Do:
   - Better integration of discrete value types
 
 Authored: 2015-10-26 (jwilson)
-Modified: 2015-10-26
+Modified: 2015-11-02
 --]]
 
 ---------------- External Dependencies
@@ -94,11 +94,11 @@ function hyper:make_warping(f)
 
       function self:warp(x)
         if torch.isTensor(x) then
-          return torch.add(torch.add(torch.ones(x:size()), -x):cmul(self.wmin:expandAs(x)),
+          return torch.add(self.wmin:expandAs(x),
                            torch.cmul(x, torch.add(self.wmax, -self.wmin):expandAs(x)))
                           :exp():add(-self.offset:expandAs(x))
         else
-          return torch.exp((1-x)*self.wmin[1] + x*(self.wmax[1]-self.wmin[1])) - self.offset[1]
+          return torch.exp(self.wmin[1] + x*(self.wmax[1]-self.wmin[1])) - self.offset[1]
         end
       end
     else

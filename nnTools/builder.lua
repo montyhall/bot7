@@ -17,7 +17,7 @@ Expects data to be passed in as:
   ------------------------------
 
 Authored: 2015-10-16 (jwilson)
-Modified: 2015-11-04
+Modified: 2015-11-05
 --]]
 
 ---------------- External Dependencies
@@ -52,8 +52,8 @@ local builder = function(config, data)
 
   -------- GPU Dependencies
   if config.gpu then
-    if not cunn then require('cunn')   end
-    if not cudnn then require('cudnn') end
+    if not cunn then require('cunn') end
+    if not cutorch then require('cutorch') end
   end
 
   -------- Data-specific
@@ -72,7 +72,6 @@ local builder = function(config, data)
   ---------------- Auxiliary Structures
   -------- Per-layer hyperparameter structures
   local nLayers = config.nLayers
-  
 
   ---- Input/Output sizes
   local dims    = config.nHidden
@@ -129,6 +128,7 @@ local builder = function(config, data)
   ---------------- Model Construction
   -------- Input Layer 
   local network = nn.Sequential()
+  network:add(nn.Reshape(dims[1]))
   if nn[edge[1]] ~= nil then
     network:add(nn[edge[1]](dims[1], dims[2]))
   end

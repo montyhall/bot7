@@ -213,7 +213,7 @@ local trainer = function(network, data, config, optimizer, criterion, state)
     if UI.msg_freq > 0 and  epoch % UI.msg_freq == 0 then
       local t   = epoch / UI.msg_freq
       local msg = string.format('Epoch: %d of %d', epoch, sched.nEpochs)
-      utils.printSection(msg)
+      utils.ui.printSection(msg)
 
       local loss = trace.loss
       local nCol = loss:size(2)

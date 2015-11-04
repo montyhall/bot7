@@ -36,7 +36,7 @@ Expects data to be passed in as:
   ------------------------------
 
 Authored: 2015-10-15 (jwilson)
-Modified: 2015-11-02
+Modified: 2015-11-04
 --]]
 
 ---------------- External Dependencies
@@ -62,11 +62,11 @@ local defaults =
 --                                     automator
 ------------------------------------------------
 local automator = function(data, expt, hypers, targs)
-  local expt    = utils.tbl_update(expt, defaults, true)
+  local expt    = utils.table.update(expt, defaults, true)
   local targs   = targs or {}
   local trainer = targs.trainer or trainer
   local builder = targs.builder or builder
-  local nHypers = utils.tbl_size(hypers)
+  local nHypers = utils.table.size(hypers)
   expt.xDim   = nHypers
 
   -------- Auxiliary method for extracting response value(s)
@@ -92,7 +92,7 @@ local automator = function(data, expt, hypers, targs)
         if vals[key] then return aux.extract(vals[key]) end
       end
     end
-    return utils.as_val(vals, 1)
+    return utils.tensor.number(vals, 1)
   end
     
 

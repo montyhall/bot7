@@ -5,13 +5,13 @@
 Bayesian Optimization of benchmarking functions.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-10-26
+Modified: 2015-11-04
 --]]
 
 ---------------- External Dependencies
 local paths = require('paths')
 local bot7  = require('bot7')
-local benchmarks = paths.dofile('benchmarks/init.lua')
+local benchmarks = require('bot7.benchmarks')
 
 ------------------------------------------------
 --                                Initialization

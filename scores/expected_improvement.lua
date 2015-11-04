@@ -10,7 +10,7 @@ The (optional) 'tradeoff' parameter helps govern
 the balance between exploration and exploitation.
 
 Authored: 2015-09-16 (jwilson)
-Modified: 2015-10-11
+Modified: 2015-11-04
 --]]
 
 ---------------- External Dependencies
@@ -55,7 +55,7 @@ function EI.eval(model, hyp, X_obs, Y_obs, X_hid, X_pend, config)
     local X_obs, Y_obs, Y_pend = X_obs, Y_obs, nil
     Y_pend = model:fantasize(config.nFantasies, X_obs, Y_obs, X_pend, hyp)
     X_obs  = X_obs:cat(X_pend, 1)
-    Y_obs  = utils.vect(Y_obs):repeatTensor(1, config.nFantasies):cat(Y_pend, 1)
+    Y_obs  = utils.tensor.vect(Y_obs):repeatTensor(1, config.nFantasies):cat(Y_pend, 1)
   end
 
   -------- Compute predictive posterior at X_hid
@@ -74,8 +74,8 @@ function EI.compute(fval, fvar, fmin, tradeoff)
   local zvals = torch.cdiv(imprv, sigma)
 
   ---- Calculate expected improvement
-  local ei = imprv:cmul(utils.norm_cdf(zvals))
-                  :add(sigma:cmul(utils.norm_pdf(zvals)))
+  local ei = imprv:cmul(utils.math.norm_cdf(zvals))
+                  :add(sigma:cmul(utils.math.norm_pdf(zvals)))
                   :clamp(0, math.huge)
 
   -------- Take sample average

@@ -17,7 +17,7 @@ Expects data to be passed in as:
   ------------------------------
 
 Authored: 2015-10-27 (jwilson)
-Modified: 2015-10-27
+Modified: 2015-11-04
 --]]
 
 ---------------- External Dependencies
@@ -41,7 +41,7 @@ local defaults =
 local evaluator = function(network, criterion, X, Y, config, confusion)
   -------- Local Initialization
   local network, criterion = network, criterion
-  local config  = utils.deepcopy(config or {})
+  local config  = utils.table.deepcopy(config or {})
   setmetatable(config, {__index = defaults})
   local network = network
   local X, xDim = X, X:size(2)

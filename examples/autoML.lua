@@ -22,9 +22,9 @@ see: hyperparam.lua
 --]]
 
 ---------------- External Dependencies
-local math   = require('math')
-local bot7   = require('bot7')
-local nnTools    = bot7.nnTools
+local math    = require('math')
+local bot7    = require('bot7')
+local nnTools = require('bot7.nnTools')
 local utils      = bot7.utils
 local hyperparam = bot7.hyperparam
 
@@ -40,7 +40,7 @@ cmd:option('-expt',     '', 'path to experiment configuration file')
 cmd:option('-hypers',   '', 'path to hyperparameter specification file')
 cmd:text('================================')
 local opt = cmd:parse(arg or {})
-if opt.verbose then utils.printArgs() end
+if opt.verbose then utils.ui.printArgs() end
 
 ------------------------------------------------
 --                                        autoML
@@ -61,7 +61,7 @@ expt.schedule = {nEpochs = 100}
 
 ---- Load expt config file (if provided)
 if opt.expt ~= '' then
-  utils.tbl_update(expt, paths.dofile(opt.expt))
+  utils.table.update(expt, paths.dofile(opt.expt))
 end
 
 ---- Establish metatables

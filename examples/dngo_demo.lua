@@ -10,7 +10,7 @@ Neural Networks" (Snoek et. al 2015)
 
 
 Authored: 2015-09-30 (jwilson)
-Modified: 2015-10-27
+Modified: 2015-11-04
 --]]
 
 ---------------- External Dependencies
@@ -87,7 +87,7 @@ init['optimizer'] =
 expt['init'] = init
 
 ---- Network Update Settings
-local update = expt.update or utils.deepcopy(expt.init)
+local update = expt.update or utils.table.deepcopy(expt.init)
 update.schedule.nEpochs = 100
 update.optimizer.weightDecay  = 5e-4
 update.optimizer.learningRate = 1e-2
@@ -126,7 +126,7 @@ end
 --                                     dngo_demo
 ------------------------------------------------
 function synthesize()
-  local config = utils.deepcopy(expt.grid)
+  local config = utils.table.deepcopy(expt.grid)
   local func   = benchmarks[expt.func]
   local grid   = bot7.grids[config.type]()
   local data   = {}

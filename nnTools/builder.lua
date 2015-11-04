@@ -17,7 +17,7 @@ Expects data to be passed in as:
   ------------------------------
 
 Authored: 2015-10-16 (jwilson)
-Modified: 2015-11-02
+Modified: 2015-11-04
 --]]
 
 ---------------- External Dependencies
@@ -48,7 +48,7 @@ local builder = function(config, data)
 
     gpu     = false,
   }
-  utils.tbl_update(config, model, true)
+  utils.table.update(config, model, true)
 
   -------- GPU Dependencies
   if config.gpu then

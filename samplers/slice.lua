@@ -5,7 +5,7 @@
 Slice sampler for bot7.
 
 Authored: 2015-09-16 (jwilson)
-Modified: 2015-10-19
+Modified: 2015-11-04
 --]]
 
 ---------------- External Dependencies
@@ -152,12 +152,12 @@ function sampler.directed_slice(opt, f, f_args, dir, x0)
 
     idx = dx:gt(0):nonzero() -- Update right
     if idx:dim() > 0 then
-      utils.indexCopy(right, dx, idx:select(2,2))
+      utils.tensor.indexCopy(right, dx, idx:select(2,2))
     end
 
     idx = dx:lt(0):nonzero() -- Update left
     if idx:dim() > 0 then
-      utils.indexCopy(left, dx, idx:select(2,2))
+      utils.tensor.indexCopy(left, dx, idx:select(2,2))
     end
 
     collectgarbage()

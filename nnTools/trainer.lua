@@ -17,7 +17,7 @@ Expects data to be passed in as:
   ------------------------------
 
 Authored: 2015-09-30 (jwilson)
-Modified: 2015-11-02
+Modified: 2015-11-04
 --]]
 
 ---------------- External Dependencies
@@ -56,7 +56,7 @@ local defaults =
 local trainer = function(network, data, config, optimizer, criterion, state)
   -------- Initialization
   local network, data = network, data
-  local config = utils.tbl_update(config, defaults, true)
+  local config = utils.table.update(config, defaults, true)
   if not config.schedule.eval_freq then
     config.schedule.eval_freq = config.schedule.nEpochs
   end
@@ -217,7 +217,7 @@ local trainer = function(network, data, config, optimizer, criterion, state)
 
       local loss = trace.loss
       local nCol = loss:size(2)
-      local prev = utils.nanop(torch.max, loss[{{}, nCol}])
+      local prev = utils.math.nanop(torch.max, loss[{{}, nCol}])
       local idx  = loss:select(2, nCol):eq(prev):repeatTensor(nCol, 1):t()
       local loss = loss:maskedSelect(idx)
       local err  = nil

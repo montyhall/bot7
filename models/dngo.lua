@@ -11,7 +11,7 @@ Target Article:
 Neural Networks" (Snoek et. al 2015)
 
 Authored: 2015-09-30 (jwilson)
-Modified: 2015-10-30
+Modified: 2015-11-04
 --]]
 
 ---------------- External Dependencies
@@ -210,8 +210,8 @@ function dngo:report(info)
   end
 
   -------- Printing
-  if utils.tbl_size(msg) > 0 then
-    utils.printSection('DNGO Update Report', {width=32})
+  if utils.table.size(msg) > 0 then
+    utils.ui.printSection('DNGO Update Report', {width=32})
     for k = 1, 4 do if msg[k] then print(msg[k]) end end
   end
 end

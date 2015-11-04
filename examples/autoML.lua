@@ -22,10 +22,10 @@ see: hyperparam.lua
 --]]
 
 ---------------- External Dependencies
-local math   = require('math')
-local bot7   = require('bot7')
-local autoML = bot7.automate
-local utils  = bot7.utils
+local math    = require('math')
+local bot7    = require('bot7')
+local nnTools = require('bot7.nnTools')
+local utils      = bot7.utils
 local hyperparam = bot7.hyperparam
 
 ------------------------------------------------
@@ -40,7 +40,7 @@ cmd:option('-expt',     '', 'path to experiment configuration file')
 cmd:option('-hypers',   '', 'path to hyperparameter specification file')
 cmd:text('================================')
 local opt = cmd:parse(arg or {})
-if opt.verbose then utils.printArgs() end
+if opt.verbose then utils.ui.printArgs() end
 
 ------------------------------------------------
 --                                        autoML
@@ -54,14 +54,14 @@ local data = torch.load(opt.data)
 local expt = {yDim=data.yr:max(), verbose=opt.verbose, msg_freq=-1}
 
 ---- Model architecture
-expt.model = {nLayers = 2, nHidden = 100}
+expt.model = {nLayers=2, nHidden=100}
 
 ---- Training schedule
 expt.schedule = {nEpochs = 100}
 
 ---- Load expt config file (if provided)
 if opt.expt ~= '' then
-  utils.tbl_update(expt, paths.dofile(opt.expt))
+  utils.table.update(expt, paths.dofile(opt.expt))
 end
 
 ---- Establish metatables
@@ -87,8 +87,10 @@ else
   }
 end
 
+targs = {target = 'loss'} -- specify key for target measures
+
 ---- Run automator
-autoML(data, expt, hypers)
+nnTools.automator(data, expt, hypers, targs)
 
 
 

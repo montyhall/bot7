@@ -11,13 +11,15 @@ Target Article:
 Neural Networks" (Snoek et. al 2015)
 
 Authored: 2015-09-30 (jwilson)
-Modified: 2015-10-27
+Modified: 2015-11-04
 --]]
 
 ---------------- External Dependencies
 local utils = require('bot7.utils')
 local BLR   = require('gp.models').bayes_linear
-local nnTools = require('bot7.nnTools')
+local builder   = require('bot7.nnTools.builder')
+local trainer   = require('bot7.nnTools.trainer')
+local evaluator = require('bot7.nnTools.evaluator')
 
 ------------------------------------------------
 --                                          dngo
@@ -52,12 +54,12 @@ function dngo:init(X, Y)
 
   -------- Construct model (if necessary)
   if not self.network then
-    self.network = nnTools.builder(config.model, data)
+    self.network = builder(config.model, data)
   end
   local network = self.network
 
   -------- Update network; do first to ensure tensor shapes
-  nnTools.trainer(network, data, config.init or config.update,
+  trainer(network, data, config.init or config.update,
                   self.optimizer, self.criterion, self.state)
 
   -------- Initialize predictor
@@ -119,7 +121,7 @@ function dngo:predict(X0, Y0, X1, hyp, req, skip)
     ---- Network error prior to update
     local info, theta0, theta1 = {pre={}}
     if verbose > 2 then
-      info.pre['loss'], info.pre['err'] = nnTools.evaluator(network, criterion, X0, Y0)
+      info.pre['loss'], info.pre['err'] = evaluator(network, criterion, X0, Y0)
       if verbose > 3 then
         theta0, _ = self.network:getParameters(); theta0 = theta0:clone()
       end
@@ -127,7 +129,7 @@ function dngo:predict(X0, Y0, X1, hyp, req, skip)
 
     ---- Network Update
     self.state.dfdx:mul(0.5) -- dampen momentum
-    info.post = nnTools.trainer(network, {xr=X0, yr=Y0}, config.update, 
+    info.post = trainer(network, {xr=X0, yr=Y0}, config.update, 
                                 optimizer, criterion, self.state)
 
     if verbose > 3 then 
@@ -208,8 +210,8 @@ function dngo:report(info)
   end
 
   -------- Printing
-  if utils.tbl_size(msg) > 0 then
-    utils.printSection('DNGO Update Report', {width=32})
+  if utils.table.size(msg) > 0 then
+    utils.ui.printSection('DNGO Update Report', {width=32})
     for k = 1, 4 do if msg[k] then print(msg[k]) end end
   end
 end

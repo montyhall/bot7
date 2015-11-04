@@ -4,19 +4,21 @@ __Notice__: Please be sure to update your copy of `Torch7` prior to work with `b
 
 <a name="bot7.intro.dok"/>
 # bot7 #
-__bot7__ is a framework for Bayesian Optimization implemented in Torch7. For it's companion package on Gaussian Processes, please refer to [gpTorch7](https://github.com/j-wilson/gpTorch7). This package is currently still in an alpha-build stage; so, please feel free to pass along suggestions and/or feedback.
+__bot7__ is a framework for Bayesian Optimization implemented in Torch7. For it's companion package on Gaussian Processes, please refer to [gpTorch7](https://github.com/j-wilson/gpTorch7). Please feel free to pass along suggestions, requests, or feedback.
 <a name="bot7.content.dok"/>
 ## Package Content ##
 
 Directory    | Content 
 :-------------:|:----------------------
 bots       | Automated experiment runners
-nnTools    | Convenience methods for Neural Networks
 models     | Target function models
 scores     | Acquisition functions (incl. EI, UCB)
 grids      | Candidate grids
 samplers   | Sampling methods (e.g. slice sampling)
-examples   | Demos / Benchmark Functions
+utils      | Utility methods
+nnTools    | Convenience methods for neural networks
+benchmarks | Benchmarking functions
+examples   | Usage examples
 <a name="bot7.dev.dok"/>
 
 ## Installation and Usage ##

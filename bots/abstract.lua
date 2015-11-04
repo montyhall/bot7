@@ -5,7 +5,7 @@
 Abstact base class for bot7 bots.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-10-27
+Modified: 2015-11-04
 --]]
 
 ---------------- External Dependencies
@@ -48,7 +48,7 @@ function bot:__init(config, objective, cache)
 end
 
 function bot:configure(config)
-  local config = utils.deepcopy(config)
+  local config = utils.table.deepcopy(config)
   assert(config.xDim) -- must be provided
 
   ---------------- Default Settings
@@ -85,7 +85,7 @@ function bot:run_trial()
 
   -------- Nominate candidate and mark as pending
   local idx    = self:nominate()
-  self.pending, self.candidates = utils.steal(self.pending, self.candidates, idx)
+  self.pending, self.candidates = utils.tensor.steal(self.pending, self.candidates, idx)
 
   idx     = self.pending:size(1) -- update idx
   nominee = self.pending:select(1, idx)
@@ -111,7 +111,7 @@ function bot:run_trial()
   end
 
   self.observed, self.pending = 
-    utils.steal(self.observed, self.pending, torch.LongTensor{idx})
+    utils.tensor.steal(self.observed, self.pending, torch.LongTensor{idx})
 
   -------- Initialize model w/ values
   if self.model and self.nTrials == self.config.bot.nInitial then
@@ -153,28 +153,28 @@ function bot:progress_report(t, x, y)
     if config.bot.verbose < 1 then return end
 
     local msg = string.format('Trial: %d of %d', t, config.bot.budget)
-    utils.printSection(msg)
+    utils.ui.printSection(msg)
 
     -------- Print Level 1
     if config.bot.verbose == 1 then
-      print(string.format('> Best response (#%d):', utils.as_val(self.best.t)))
-      print(utils.tnsr2str(best_y) ..'\n')
+      print(string.format('> Best response (#%d):', utils.tensor.number(self.best.t)))
+      print(utils.tensor.string(best_y) ..'\n')
       print('> Most recent:')
-      print(utils.tnsr2str(y))
+      print(utils.tensor.string(y))
       return
     end
 
     -------- Print Levels 2
-    print(string.format('> Best seen (#%d):', utils.as_val(self.best.t)))
-    print('Response:\n' .. utils.tnsr2str(self.best.y) .. '\n')
-    print('Hypers:\n' .. utils.tnsr2str(self.best.x))
+    print(string.format('> Best seen (#%d):', utils.tensor.number(self.best.t)))
+    print('Response:\n' .. utils.tensor.string(self.best.y) .. '\n')
+    print('Hypers:\n' .. utils.tensor.string(self.best.x))
 
     print('\n> Most recent:')
-    print('Response:\n' .. utils.tnsr2str(y) .. '\n')
+    print('Response:\n' .. utils.tensor.string(y) .. '\n')
     if config.bot.verbose == 2 then return end
 
     -------- Print Level 3
-    print('Hypers:\n' .. utils.tnsr2str(x))
+    print('Hypers:\n' .. utils.tensor.string(x))
   end
 end
 

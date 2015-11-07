@@ -16,8 +16,8 @@ Expects data to be passed in as:
   |  yv   | Validation Targets |
   ------------------------------
 
-Authored: 2015-09-30 (jwilson)
-Modified: 2015-11-04
+Authored: 2015-11-04 (jwilson)
+Modified: 2015-11-13
 --]]
 
 ---------------- External Dependencies
@@ -26,15 +26,19 @@ local optim = require('optim')
 local math  = require('math')
 local nn    = require('nn')
 local evaluator = require('bot7.nnTools.evaluator')
+local Buffers = require('bot7.nnTools.buffers')
 
 ---------------- Constants
 local defaults = 
-{
+{ 
+  -------- Global terms
+  batchsize = 32,
+
   -------- User Interface
   ui = {verbose=1, save=0, msg_freq=math.huge},
 
   -------- Training Schedule
-  schedule = {gpu=false, nEpochs=100, batchsize=32},
+  schedule = {nEpochs=100},
 
   -------- Criterion
   criterion = {type = 'ClassNLLCriterion'},
@@ -48,135 +52,98 @@ local defaults =
     weightDecay       = 1e-5,
     momentum          = 9e-1,
   },
+
+  buffers = {fullsize=5120}
 }
+
+-- Set inheritence for sub-tables
+for key, field in pairs(defaults) do
+  if type(field) == 'table' then
+    setmetatable(field,{__index=defaults})
+  end
+end
 
 ------------------------------------------------
 --                                       trainer
 ------------------------------------------------
-local trainer = function(network, data, config, optimizer, criterion, state)
+local trainer = function(network, data, config, cache)
   -------- Initialization
   local network, data = network, data
-  local config = utils.table.update(config, defaults, true)
-  if not config.schedule.eval_freq then
-    config.schedule.eval_freq = config.schedule.nEpochs
-  end
-  config.ui.msg_freq = math.max(config.ui.msg_freq, config.schedule.eval_freq)
+  local config = utils.table.deepcopy(config or {})
+  utils.table.update(config, defaults, true)
 
-  local optimizer = optimizer or optim[config.optimizer.type]
-  local criterion = criterion or nn[config.criterion.type]()
   local UI, sched = config.ui, config.schedule
-  local state     = state or {} -- state for optimizer
+  local cache     = cache or {}
+  local optimizer = cache.optimizer or optim[config.optimizer.type]
+  local criterion = cache.criterion or nn[config.criterion.type]()
+  local state     = cache.state or {} -- state for optimizer
+  local buffers   = cache.buffers or Buffers(config.buffers, data)
+  local flags     = cache.flags or {classif=false}
+  local surrogate = cache.surrogate
+
+  -------- Enforce GPU settings
+  if sched.gpu then
+    require('cunn'); require('cutorch');
+    network:cuda(); criterion:cuda(); buffers:cuda() -- Convert to GPU
+    if surrogate then surrogate:cuda() end
+    buffers.config.type = 'CudaTensor'
+  end
 
   -------- Shape Information
-  local counts = {r=data.xr:size(1), e=0, v=0}
-  if data.xe and data.ye then counts.e = data.xe:size(1) end
-  if data.xv and data.yv then counts.v = data.xv:size(1) end
-  local xDim, yDim = data.xr:size(2), 1
-  if data.yr:dim() > 1 then yDim = data.yr:size(2)  end
+  local suffix, counts = {'e', 'r', 'v'}, {}
+  for idx, key in pairs(suffix) do
+    if data['x'..key] and data['y'..key] then
+      counts[key] = data['x'..key]:size(1)
+    end
+  end
+
+  -------- Safeguard against bad settings
+  if not sched.eval_freq then sched.eval_freq = sched.nEpochs end
+  UI.msg_freq = math.max(UI.msg_freq, sched.eval_freq)
+  buffers.config.batchsize = math.min(sched.batchsize, buffers.config.fullsize)
 
   -------- Detect Problem Type (Classif. / Regression)
-  local ttype, classif = data.yr:type(), false
+  local ttype = data.yr:type()
   if ttype == 'torch.LongTensor' 
   or ttype == 'torch.ByteTensor'
   or data.yr:eq(torch.floor(data.yr)):all() then
-    classif = true
+    flags.classif = true
   end
 
-  -------- Local Aliases / Tensor Preallocation
+  -------- Local Aliases / Result tensor reallocation
   local W, grad = network:getParameters()
-  local suffix  = {'e', 'r', 'v'}
   local nSets, nEvals, trace = 0, 0, {} 
   if sched.eval_freq > 0 then
     nEvals = math.floor(sched.nEpochs/sched.eval_freq)
     if nEvals > 0 then 
-      if counts.r > 0 then nSets = nSets + 1 end
-      if counts.e > 0 then nSets = nSets + 1 end
-      if counts.v > 0 then nSets = nSets + 1 end
-      trace = {loss = torch.Tensor(nEvals, nSets+1):fill(0/0)} -- last position stores epoch
-      if classif then
+      for key, count in pairs(counts) do
+        if count > 0 then nSets = nSets + 1 end
+      end
+      ---- last column in trace stores epoch
+      trace = {loss = torch.Tensor(nEvals, nSets+1):fill(0/0)}
+      if flags.classif then
         trace.err = torch.Tensor(nEvals, nSets+1):fill(0/0)
       end
     end
-  end
-
-  -------- Allocate Buffers (GPU only)
-  local inputs, targets
-  if sched.gpu then 
-    inputs = torch.CudaTensor(sched.batchsize, xDim)
-    if yDim > 1 then
-      targets = torch.CudaTensor(sched.batchsize, yDim)
-    else
-      targets = torch.CudaTensor(sched.batchsize)
-    end
-  end
-
-  -------- Batch Generator
-  local get_batch = function(idx, suffix)
-    local suffix = suffix or 'r'
-    local X, Y   = data['x'..suffix], data['y'..suffix]
-    if config.gpu then
-      local nRow = idx:nElement()
-      inputs:resize(nRow, xDim):copy(X:index(1, idx))
-      if yDim > 1 then
-        targets:resize(nRow,yDim):copy(Y:index(1, idx))
-      else
-        targets:resize(nRow):copy(Y:index(1, idx))
-      end
-      return inputs, targets
-    else
-      return X:index(1, idx), Y:index(1, idx)
-    end
-  end
-
-  -------- Explicit Feature Corruption (regularizer)
-  local corrupt = function(x)
-    local config, ttype = sched.corruption, x:type()
-    local degree, std   = config.degree, config.std
-    if (degree > 0  or std > 0) and (not config.type) then
-      config.type = 'gaussian'
-    end
-
-    if config.type == 'blankout' then
-      if config.gpu then 
-        return x:cmul(torch.rand(x:size()):gt(degree):cuda())
-      else
-        return torch.cmul(x, torch.rand(x:size()):gt(degree):type(ttype))
-      end
-
-    elseif config.type == 'gaussian' then
-      if not std and degree then
-        if type(degree) == 'number' then
-          std = data.xr:std(1):mul(degree):expandAs(x)
-        else
-          std = data.xr:std(1):cmul(degree):expandAs(x)
-        end
-      elseif type(std) == 'number' then 
-        std = torch.Tensor{{std}}:type(ttype):expand(x:size(2), 1)
-      end
-
-      if config.gpu then 
-        return x:add(torch.randn(x:size()):cuda():cmul(std))
-      else
-        return torch.add(x, torch.randn(x:size()):type(ttype):cmul(std))
-      end
-    else
-      print('Error: Unrecognized noise distribution '..
-            'specified; skipping feature corruption...')
-      return
-    end
-
   end
 
   -------- Functional Closure (for optimizer)
   local closure = function(x)
     if x ~= W then W:copy(x) end
     grad:zero() -- reset grads
-    
+
+    local inputs  = buffers('x')
+    local targets = buffers('y')
+    if buffers:has_key('ys') then        -- 'ys' denotes a surrogate
+      targets = {targets, buffers('ys')} -- model's predictions, e.g.,
+    end                                  -- Dark Knowledge
+
     local outputs = network:forward(inputs)
-    local fval  = criterion:forward(outputs, targets)
-    local df_dw = criterion:backward(outputs, targets) -- ~= df/dW
+    local fval    = criterion:forward(outputs, targets)
+    local df_dw   = criterion:backward(outputs, targets)
+
     network:backward(inputs, df_dw)
-    fval = fval/targets:size(1)
+    fval = fval/outputs:size(1)
     return fval, grad
   end
 
@@ -184,27 +151,42 @@ local trainer = function(network, data, config, optimizer, criterion, state)
   local update = function(suffix)
     local suffix = suffix or 'r'
     local perm = torch.randperm(counts[suffix], 'torch.LongTensor')
-    local head, size = 0, 0
-    local batchsize  = sched.batchsize
+    local tail, size  = 0, 0
+    local buffer_size = buffers.config.fullsize
+    local batchsize   = buffers.config.batchsize
+    local nBatches    = 0
     network:training()
 
-    for tail = 1, counts[suffix], batchsize do
-      head = math.min(head + batchsize, counts[suffix])
-      idx  = perm:sub(tail, head)
-      inputs, targets = get_batch(idx, suffix)
+    if criterion.training then criterion:training() end
 
-      ---- Feature Corruption (Blankout noise)
-      if sched.corruption then
-        inputs = corrupt(inputs)
+    for head = 1, counts[suffix], buffer_size do
+      tail     = math.min(head+buffer_size-1, counts[suffix])
+      nBatches = math.ceil((tail-head+1)/batchsize)
+      idx      = perm:sub(head, tail)
+      buffers:update(data, idx, suffix)
+
+      for batch = 1, nBatches do
+        ---- Compute surrogate model's prediction
+        if surrogate then
+          local ys = surrogate:forward(buffers('xs') or buffers('x'))
+          buffers:set('ys', ys) -- should improve upon
+        end
+        optimizer(closure, W, config.optimizer, state)
+        buffers:increment({'x','y'})
       end
-
-      optimizer(closure, W, config.optimizer, state)
     end
   end
 
   -------- Wrapper for evaluator
   local eval = function(suffix)
-    local loss, err = evaluator(network, criterion, data['x'..suffix], data['y'..suffix])
+    if criterion.evaluate then criterion:evaluate() end
+    local temp = buffers.config.batchsize
+    local loss, err = evaluator(network, criterion, data['x'..suffix],
+                          data['y'..suffix], config.eval, {buffers=buffers})
+
+    -- Reset batchsize (eval might use different batchsize)
+    buffers.config.batchsize = temp
+    buffers:index_reset() -- reset all indices to 1 (as a precaution)
     return loss, err
   end
 
@@ -226,7 +208,7 @@ local trainer = function(network, data, config, optimizer, criterion, state)
       end
       idx, msg = 1, ''
       for k = 1, nSets do
-        if counts[suffix[k]] > 0 then 
+        if counts[suffix[k]] then 
           if msg ~= '' then msg = msg .. ' | ' end
           msg = msg .. string.format('%.2e (%s)', loss[idx], suffix[k]:upper())
           idx = idx + 1
@@ -237,7 +219,7 @@ local trainer = function(network, data, config, optimizer, criterion, state)
         print(string.format('> Loss  at epoch %d: %s', prev, msg))
         idx, msg = 1, ''
         for k = 1, nSets do
-          if counts[suffix[k]] > 0 then 
+          if counts[suffix[k]] then 
             if msg ~= '' then msg = msg .. ' | ' end
             msg = msg .. string.format('%.2e (%s)', err[idx], suffix[k]:upper())
             idx = idx + 1
@@ -250,14 +232,12 @@ local trainer = function(network, data, config, optimizer, criterion, state)
 
       local nEvals = state.evalCounter or 0
       local lRate  = config.optimizer.learningRate/(1 + nEvals*config.optimizer.learningRateDecay)
-      print(string.format('Learning Rate: %.2E',lRate))
-      print('')
+      print(string.format('> Learning Rate: %.2E',lRate))
     end
   end
 
   -------- Main Training Loop
   for epoch = 1, sched.nEpochs do
-
     ---- Perform parameter update
     update('r')
 
@@ -265,14 +245,14 @@ local trainer = function(network, data, config, optimizer, criterion, state)
     if epoch % sched.eval_freq == 0 then
       local t, idx = epoch / sched.eval_freq, 1
       trace.loss[{t, nSets+1}] = epoch -- record epoch
-      if classif then
+      if flags.classif then
         trace.err[{t, nSets+1}] = epoch -- record epoch
       end
       for set = 1, 3 do
-        if counts[suffix[set]] > 0 then
+        if counts[suffix[set]] then
           local loss, err = eval(suffix[set])
           trace.loss[{t, idx}] = loss
-          if classif and err then
+          if flags.classif and err then
             trace.err[{t, idx}] = err
           end
           idx = idx + 1

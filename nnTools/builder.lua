@@ -17,7 +17,7 @@ Expects data to be passed in as:
   ------------------------------
 
 Authored: 2015-10-16 (jwilson)
-Modified: 2015-11-05
+Modified: 2015-11-08
 --]]
 
 ---------------- External Dependencies
@@ -27,11 +27,11 @@ local math  = require('math')
 local nn    = require('nn')
 
 ------------------------------------------------
---                                       trainer
+--                                       builder
 ------------------------------------------------
 local builder = function(config, data)
   ---------------- Default Settings
-  local config = config or {}
+  local config = utils.table.deepcopy(config or {})
   -------- Model
   local model =
   {
@@ -58,7 +58,10 @@ local builder = function(config, data)
 
   -------- Data-specific
   if data then
-    config['xDim'] = data.xr:size(2)
+    config.xDim = 1
+    for d = 2, data.xr:dim() do
+      config.xDim = config.xDim * data.xr:size(d)
+    end
     if data.yr:dim() > 1 then 
       config['yDim'] = data.yr:size(2)
       config.problem = 'regression'

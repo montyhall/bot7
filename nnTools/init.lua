@@ -5,7 +5,7 @@
 Initialization file for nnTools class.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-10-30
+Modified: 2015-11-08
 --]]
 
 ---------------- External Dependencies
@@ -16,6 +16,8 @@ local paths = require('paths')
 ------------------------------------------------
 bot7 = bot7 or {}
 bot7['nnTools'] = {}
+include('buffers.lua')
+
 bot7.nnTools['builder']   = paths.dofile('builder.lua')
 bot7.nnTools['trainer']   = paths.dofile('trainer.lua')
 bot7.nnTools['evaluator'] = paths.dofile('evaluator.lua')

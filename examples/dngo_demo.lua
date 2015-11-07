@@ -10,14 +10,14 @@ Neural Networks" (Snoek et. al 2015)
 
 
 Authored: 2015-09-30 (jwilson)
-Modified: 2015-11-04
+Modified: 2015-11-08
 --]]
 
 ---------------- External Dependencies
 local paths = require('paths')
 local bot7  = require('bot7')
 local utils = bot7.utils
-local benchmarks = paths.dofile('benchmarks/init.lua')
+local benchmarks = require('bot7.benchmarks')
 
 ------------------------------------------------
 --                                Initialization
@@ -39,6 +39,7 @@ cmd:option('-nValid',    0, 'number of validation instances to pass to network')
 cmd:option('-xDim',      100, 'specify input dimensionality for experiment')
 cmd:option('-yDim',      1,   'specify output dimensionality for experiment')
 cmd:option('-noisy',     true, 'specify observations as noisy')
+cmd:option('-batchsize', 32, 'specify batchsize for DNGO network')
 cmd:option('-grid_size', 20000, 'specify size of candidate grid')
 cmd:option('-grid_type', 'random', 'specify type of grid to employ')
 cmd:option('-mins', '',  'specify minima for inputs (defaults to 0.0)')
@@ -66,7 +67,8 @@ local expt =
   yDim   = opt.yDim,
   budget = opt.budget,
   msg_freq = opt.msg_freq,
-  verbose  = opt.verbose
+  verbose  = opt.verbose,
+  batchsize = opt.batchsize,
 }
 
 expt.bot   = {type = opt.bot, nInitial = opt.nInitial}
@@ -75,7 +77,7 @@ expt.model = {output=''} -- necessary for regression setting!
 
 ---- Network Initialization Settings
 local init        = expt.init or {}
-init['schedule']  = {nEpochs=100, batchsize=32, corruption={degree=0.2}}
+init['schedule']  = {nEpochs=100, corruption={degree=0.2}}
 init['optimizer'] = 
 {
   type              = 'sgd',
@@ -85,6 +87,12 @@ init['optimizer'] =
   momentum          = 0.9,
 }
 expt['init'] = init
+for key, field in pairs(expt.init) do
+  if type(field) == 'table' then
+    setmetatable(field, {__index=expt.init})
+  end
+end
+
 
 ---- Network Update Settings
 local update = expt.update or utils.table.deepcopy(expt.init)
@@ -116,11 +124,12 @@ elseif (opt.score == 'ucb' or opt.score == 'lcb') then
 end
 
 ---- Set metatables
-for key, val in pairs(expt) do
-  if type(val) == 'table' then
-    setmetatable(val, {__index = expt})
+for key, field in pairs(expt) do
+  if type(field) == 'table' then
+    setmetatable(field, {__index=expt})
   end
 end
+
 
 ------------------------------------------------
 --                                     dngo_demo

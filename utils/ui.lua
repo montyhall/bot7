@@ -5,7 +5,7 @@
 User Interface (UI) utility method for bot7.
 
 Authored: 2015-10-30 (jwilson)
-Modified: 2015-11-04
+Modified: 2015-11-07
 --]]
 
 ------------------------------------------------
@@ -35,8 +35,10 @@ function self.printSection(str, config)
   if tstamp then
     time = os.date("%d/%m - %H:%M%p ")
     local tlen = time:len()
-    if tstamp == true or (tstamp == 'auto' and len+tlen <= width) then
-      len = len + tlen
+    if tstamp == true or (tstamp == 'auto' and len+tlen < width) then
+      len  = len + tlen
+    else
+      time = nil
     end
   end
 
@@ -82,6 +84,5 @@ function self.printArgs()
   end
   print(' ')
 end
-
 
 return self

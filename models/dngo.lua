@@ -11,7 +11,7 @@ Target Article:
 Neural Networks" (Snoek et. al 2015)
 
 Authored: 2015-09-30 (jwilson)
-Modified: 2015-11-04
+Modified: 2015-11-08
 --]]
 
 ---------------- External Dependencies
@@ -20,6 +20,7 @@ local BLR   = require('gp.models').bayes_linear
 local builder   = require('bot7.nnTools.builder')
 local trainer   = require('bot7.nnTools.trainer')
 local evaluator = require('bot7.nnTools.evaluator')
+local Buffers   = require('bot7.nnTools.buffers')
 
 ------------------------------------------------
 --                                          dngo
@@ -34,10 +35,11 @@ local dngo, parent = torch.class(title, parent)
 function dngo:__init(config, cache, X, Y)
   parent.__init(self)
   local cache    = cache or {}
-  self.config    = cache.config or config or {}
+  self.config    = utils.table.deepcopy(config or {})
   self.network   = cache.network
   self.predictor = cache.predictor
   self.state     = cache.state or {}
+  self.buffers   = cache.buffers
   self.criterion = criterion or nn.MSECriterion()
   self.optimizer = cache.optimizer or optim.sgd
   self:init(X,Y)
@@ -58,9 +60,17 @@ function dngo:init(X, Y)
   end
   local network = self.network
 
+  -------- Allocate buffers
+  if not self.buffers then
+    self.buffers = Buffers(config.buffers, data)
+  end
+
+
   -------- Update network; do first to ensure tensor shapes
-  trainer(network, data, config.init or config.update,
-                  self.optimizer, self.criterion, self.state)
+  local cache = {optimizer=self.optimizer, buffers=self.buffers,
+                 criterion=self.criterion, state=self.state}
+  trainer(network, data, config.init or config.update, cache)
+
 
   -------- Initialize predictor
   if not self.predictor then 
@@ -128,9 +138,10 @@ function dngo:predict(X0, Y0, X1, hyp, req, skip)
     end
 
     ---- Network Update
-    self.state.dfdx:mul(0.5) -- dampen momentum
-    info.post = trainer(network, {xr=X0, yr=Y0}, config.update, 
-                                optimizer, criterion, self.state)
+    self.state.dfdx:fill(0.0) -- reset memory for momentum
+    local cache ={optimizer=optimizer, buffers=self.buffers,
+                  criterion=criterion, state=self.state}
+    info.post = trainer(network, {xr=X0, yr=Y0}, config.update, cache)
 
     if verbose > 3 then 
       theta1, _  = self.network:getParameters()

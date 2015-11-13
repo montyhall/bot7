@@ -22,9 +22,9 @@ see: hyperparam.lua
 --]]
 
 ---------------- External Dependencies
-local math    = require('math')
-local bot7    = require('bot7')
-local nnTools = require('bot7.nnTools')
+local math   = require('math')
+local bot7   = require('bot7')
+local autoML = require('bot7.nnTools.automator')
 local utils      = bot7.utils
 local hyperparam = bot7.hyperparam
 
@@ -51,7 +51,14 @@ local data = torch.load(opt.data)
 
 -------- Default Experiment Settings
 ---- High-level settings
-local expt = {yDim=data.yr:max(), verbose=opt.verbose, msg_freq=-1}
+local expt =
+{ 
+  verbose = opt.verbose,
+  gpu = false,
+  msg_freq = -1,
+  yDim = data.yr:max(),
+  batchsize = 32
+}
 
 ---- Model architecture
 expt.model = {nLayers=2, nHidden=100}
@@ -90,7 +97,7 @@ end
 targs = {target = 'loss'} -- specify key for target measures
 
 ---- Run automator
-nnTools.automator(data, expt, hypers, targs)
+autoML(data, expt, hypers, targs)
 
 
 

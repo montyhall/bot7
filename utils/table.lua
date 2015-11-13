@@ -5,7 +5,7 @@
 Table utility method for bot7.
 
 Authored: 2015-10-30 (jwilson)
-Modified: 2015-11-04
+Modified: 2015-11-06
 --]]
 
 ------------------------------------------------
@@ -56,6 +56,31 @@ function self.update(res, src, keep)
     end
   end
   return res
+end
+
+
+--------------------------------
+--       Detects key(s) in table
+--------------------------------
+function self.contains(tbl, keys)
+  if type(tbl) ~= 'table' then
+    return false
+  end
+  
+  local typ = type(keys)
+  if typ == 'string' then
+    return (tbl[keys] ~= nil)
+  elseif typ == 'table' then
+    local res = {}
+    for idx, key in pairs(keys) do
+      res[key] = self.contains(tbl, key)
+    end
+    return res
+  else
+    print('Error: utils.table.contains() encountered an '..
+      'unrecognized key type; returning false.')
+    return false
+  end
 end
 
 return self

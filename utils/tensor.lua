@@ -5,7 +5,7 @@
 Tensor utility method for bot7.
 
 Authored: 2015-10-30 (jwilson)
-Modified: 2015-11-04
+Modified: 2015-11-07
 --]]
 
 ------------------------------------------------
@@ -60,10 +60,10 @@ function self.string(tnsr, config)
   local tnsr    = tnsr
   local nDims   = tnsr:dim()
   local config  = config or {}
-  config.delim  = config.delim  or ''
+  config.delim  = config.delim  or ' '
   config.format = config.format or '%.2e'
   config.align  = config.align  or 'horiz'
-  config.rectangular = config.rectangular or true
+  config.rectangular = (config.rectangular ~= false)
 
   ---- Handle tensor dimensionality 
   if (nDims == 0) then
@@ -114,13 +114,26 @@ function self.string(tnsr, config)
     for col = 1, nCol do  
       if count < N then
         str = str .. string.format(config.format, tnsr[row][col])
-        if col < nCol then str = str .. config.delim .. ' ' end
+        if col < nCol then str = str .. config.delim end
       end
      count = count + 1
     end
     if row < nRow then str = str .. '\n' end
   end
   return str
+end
+
+--------------------------------
+--         Shorthand Tensor Info
+--------------------------------
+function self.info(tnsr)
+  if torch.isTensor(tnsr) then
+    local ttype = tnsr:type()
+          ttype = ttype:sub(7, ttype:len()) -- omit 'torch.'
+    local shape = self.shape(tnsr)
+          shape = self.string(shape, {rectangular=false, format='%d', delim='x'})
+    return {type=ttype, shape=shape, size=tostring(tnsr:nElement())}
+  end
 end
 
 --------------------------------
@@ -166,7 +179,7 @@ function self.steal(res, src, idx, axis_r, axis_s)
   local axis_s = axis_s or 1
 
   if idx:dim() > 1 then 
-    idx = idx:resize(idx:nElement()) 
+    idx = idx:resize(idx:nElement())
   end
   
   -------- Append slices to res

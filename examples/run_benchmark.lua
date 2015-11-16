@@ -5,12 +5,13 @@
 Bayesian Optimization of benchmarking functions.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-11-04
+Modified: 2015-11-17
 --]]
 
 ---------------- External Dependencies
 local paths = require('paths')
 local bot7  = require('bot7')
+local hyperparam = bot7.hyperparam
 local benchmarks = require('bot7.benchmarks')
 
 ------------------------------------------------
@@ -93,13 +94,17 @@ end
 --                                 run_benchmark
 ------------------------------------------------
 function run_benchmark(expt)
+  local hypers = {}
+  for k = 1, opt.xDim do
+    hypers[k] = hyperparam('x'..k, 0, 1)
+  end
 
   -------- Initialize bot
   local bot
   if expt.bot.type == 'bo' then
-    bot = bot7.bots.bayesopt(expt, benchmarks[opt.benchmark])
+    bot = bot7.bots.bayesopt(benchmarks[opt.benchmark], hypers, expt)
   elseif expt.bot.type == 'rs' then
-    bot = bot7.bots.random_search(expt, benchmarks[opt.benchmark])
+    bot = bot7.bots.random_search(benchmarks[opt.benchmark], hypers, expt)
   else
     print('Error: Unrecognized bot specified; aborting...')
     return

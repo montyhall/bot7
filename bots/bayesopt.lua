@@ -5,7 +5,7 @@
 Bayesian Optimization bot class for bot7.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-11-16
+Modified: 2015-11-17
 --]]
 
 ---------------- External Dependencies
@@ -84,7 +84,7 @@ end
 ---------------- Nominate a candidate
 function bot:nominate(candidates)
   local candidates = candidates or self.candidates
-  local idx
+  local min, idx
 
   -------- Select initial points randomly
   if self.nTrials <= self.config.bot.nInitial then
@@ -93,7 +93,7 @@ function bot:nominate(candidates)
   -------- Nominate according to acquistion values
   else
     local score = self:eval(candidates)
-    min, idx  = score:max(1)
+    min, idx = score:max(1)
   end
   return idx
 end

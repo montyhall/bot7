@@ -17,7 +17,7 @@ Expects data to be passed in as:
   ------------------------------
 
 Authored: 2015-11-04 (jwilson)
-Modified: 2015-11-16
+Modified: 2015-11-17
 --]]
 
 ---------------- External Dependencies
@@ -100,7 +100,6 @@ local trainer = function(network, data, config, cache)
 
   -------- Safeguard against bad settings
   if not sched.eval_freq then sched.eval_freq = sched.nEpochs end
-  --UI.msg_freq = math.max(UI.msg_freq, sched.eval_freq)
   buffers.config.batchsize = math.min(sched.batchsize, buffers.config.fullsize)
 
   -------- Detect Problem Type (Classif. / Regression)
@@ -159,24 +158,36 @@ local trainer = function(network, data, config, cache)
     local buffer_size = buffers.config.fullsize
     local batchsize   = buffers.config.batchsize
     local nBatches    = 0
-    network:training()
 
+    ---- Establish which buffers need to be updated/incremented
+    local keys = {'x'..suffix, 'y'..suffix}
+    if surrogate and buffers:has_key('xs') then
+      table.insert(keys, 'xs') -- input buffer for surrogate
+    elseif buffers:has_key('ys') then
+      table.insert(keys, 'ys') -- cached outputs from surrogate
+    end
+
+    ---- Set modules to 'training' mode
+    if network.training   then network:training()   end
     if criterion.training then criterion:training() end
 
-    for head = 1, counts[suffix], buffer_size do
+    for head = 1, counts[suffix], buffer_size do -- iterate over databatches
       tail     = math.min(head+buffer_size-1, counts[suffix])
       nBatches = math.ceil((tail-head+1)/batchsize)
       idx      = perm:sub(head, tail)
-      buffers:update(data, idx, suffix)
+      buffers:update(data, idx, keys) -- load next databatch
 
-      for batch = 1, nBatches do
+      for batch = 1, nBatches do -- iterate over minibatches
         ---- Compute surrogate model's prediction
         if surrogate then
-          local ys = surrogate:forward(buffers('xs') or buffers('x'))
-          buffers:set('ys', ys) -- should improve upon
+          if buffers:has_key('xs') then
+            buffers:set('ys', surrogate:forward(buffers('xs')))
+          else
+            buffers:set('ys', surrogate:forward(buffers('x')))
+          end
         end
         optimizer(closure, W, config.optimizer, state)
-        buffers:increment({'x','y'})
+        buffers:increment(keys) -- prepare for next minibatch
       end
     end
     timer:stop('update')
@@ -188,7 +199,7 @@ local trainer = function(network, data, config, cache)
     if criterion.evaluate then criterion:evaluate() end
     local temp = buffers.config.batchsize
     local loss, err = evaluator(network, criterion, data['x'..suffix],
-                          data['y'..suffix], config.eval, {buffers=buffers})
+                        data['y'..suffix], config.eval, {buffers=buffers})
 
     -- Reset batchsize (eval might use different batchsize)
     buffers.config.batchsize = temp

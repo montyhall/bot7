@@ -10,13 +10,14 @@ Neural Networks" (Snoek et. al 2015)
 
 
 Authored: 2015-09-30 (jwilson)
-Modified: 2015-11-08
+Modified: 2015-11-17
 --]]
 
 ---------------- External Dependencies
 local paths = require('paths')
 local bot7  = require('bot7')
 local utils = bot7.utils
+local hyperparam = bot7.hyperparam
 local benchmarks = require('bot7.benchmarks')
 
 ------------------------------------------------
@@ -172,7 +173,13 @@ end
 
 data  = synthesize()
 model = bot7.models.dngo(expt)
-bot   = bot7.bots.bayesopt(expt, benchmarks[expt.func], {model=model})
+
+hypers = {}
+for k = 1, opt.xDim do
+  hypers[k] = hyperparam('x'..k, 0, 1)
+end
+
+bot   = bot7.bots.bayesopt(benchmarks[expt.func], hypers, expt, {model=model})
 bot:run_experiment()
 
 

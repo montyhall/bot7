@@ -23,5 +23,6 @@ bot7.nnTools['builder']   = paths.dofile('builder.lua')
 bot7.nnTools['trainer']   = paths.dofile('trainer.lua')
 bot7.nnTools['evaluator'] = paths.dofile('evaluator.lua')
 bot7.nnTools['automator'] = paths.dofile('automator.lua')
+bot7.nnTools['preprocessor'] = paths.dofile('preprocessor.lua')
 return bot7.nnTools
 

@@ -26,7 +26,7 @@ f(x*) = -3.862878 at x* := (0.114614, 0.555649, 0.852547)
 
   
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-10-10
+Modified: 2015-11-17
 --]]
 
 ---------------- External Dependencies
@@ -49,7 +49,7 @@ local a = -torch.Tensor{{1.0, 1.2, 3.0, 3.2}}
 ------------------------------------------------
 local hartmann3 = function(X)
   if (X:dim() == 1 or X:size(1) == X:nElement()) then
-    X = X:resize(1, X:nElement())
+    X = X:reshape(1, X:nElement())
   end
   assert(X:size(2) == 3)
 

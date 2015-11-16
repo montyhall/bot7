@@ -22,7 +22,7 @@ f(x*)~= -1.0316 at:
 
 
 Authored: 2015-10-02 (jwilson)
-Modified: 2015-10-10
+Modified: 2015-11-17
 --]]
 
 ---------------- External Dependencies
@@ -55,22 +55,3 @@ local camel_hump6 = function(X)
 end
 
 return camel_hump6
-
--- function camel_hump6_grad(X)
---   -------- Transform x -> (z1, z2)
---   local z1    = torch.add(X[{{},{1}}], offset):mul(scale[{1,1}])
---   local z2    = torch.add(X[{{},{2}}], offset):mul(scale[{1,2}])
---   local grads = torch.Tensor(X:size(1),2)
-
---   -------- Gradient of f(x) w.r.t. z1
---   grads[{{},{1}}] = torch.pow(z1, 5):mul(6*a):add(
---                     torch.pow(z1, 3):mul(4*b)):add(
---                     z1:clone():mul(2*c)):add(z2)
-
---   -------- Gradient of f(x) w.r.t. z2           
---   grads[{{},{2}}] = torch.pow(z2, 3):mul(4):add(torch.mul(z2, -2)):mul(c):add(z1)
-
---   -------- Factor in dz/dx
---   grads:cmul(scale:expandAs(grads))
---   return grads
--- end

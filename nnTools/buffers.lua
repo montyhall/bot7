@@ -15,7 +15,7 @@ To do:
   - Implement buffer-specific fullsize / batchsize
 
 Authored: 2015-11-04 (jwilson)
-Modified: 2015-11-13
+Modified: 2015-11-17
 --]]
 
 ---------------- External Dependencies
@@ -238,14 +238,14 @@ function buffers:increment(keys, stepsize)
   -------- Increment specified buffers 
   if type(keys) == 'string' then keys = {keys} end
   for idx, key in pairs(keys) do
-    assert(buffers[key].index <= buffers[key].shape[1])
     group = config.shared[key]
     if not group then
+      assert(buffers[key].index <= buffers[key].shape[1])
       buffers[key].index = math.min(buffers[key].index + stepsize, buffers[key].shape[1])
     elseif not flags[group] then -- avoid incrememting group 
       flags[group] = true        -- multiple times
-      buffers[key].index = math.min(buffers[key].index + stepsize, buffers[key].shape[1])
-      buffers[key].index = buffers[key].index + stepsize
+      assert(buffers[group].index <= buffers[group].shape[1])
+      buffers[group].index = math.min(buffers[group].index + stepsize, buffers[group].shape[1])
     end
   end
 end
@@ -253,6 +253,7 @@ end
 function buffers:update(data, idx, patterns)
   local config   = self.config
   local patterns = patterns
+  local updated  = {} -- block against multiple updates
   if type(patterns) == 'string' then
     patterns = {patterns}
   end
@@ -271,8 +272,17 @@ function buffers:update(data, idx, patterns)
       end
     end
 
-    ---- Update specified buffer
-    if flag then self:set(key, field, idx) end
+    ---- Update specified buffer 
+    if flag then
+      local group = config.shared[key]    -- We only update
+      if not (group or updated[key]) then -- individual buffers
+        self:set(key, field, idx)         -- once per call.
+        updated[key] = true               
+      elseif not updated[group] then      -- Shared buffers are
+        self:set(group, field, idx)       -- treated as a single
+        updated[group] = true             -- buffer.
+      end      
+    end
   end
   collectgarbage()
 end

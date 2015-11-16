@@ -106,8 +106,9 @@ local automator = function(data, expt, hypers, targs)
       stack = env[key:sub(1,idx-1)]
       key   = key:sub(idx+1, key:len())
       idx   = string.find(key, '%.')
-      while idx do
-        stack = stack[key:sub(1, idx-1)] or {}
+      while idx do -- iterate down to innermost parent
+        stack[key:sub(1, idx-1)] = stack[key:sub(1, idx-1)] or {}
+        stack = stack[key:sub(1, idx-1)]
         key   = key:sub(idx+1, key:len())
         idx   = string.find(key, '%.')
       end

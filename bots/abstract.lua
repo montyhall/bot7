@@ -5,7 +5,7 @@
 Abstact base class for bot7 bots.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-11-16
+Modified: 2015-11-17
 --]]
 
 ---------------- External Dependencies
@@ -55,7 +55,7 @@ function bot:configure(config)
   ---------------- Default Settings
   -------- Bot
   local bot       = config.bot or {}
-  bot['verbose']  = bot.verbose or 4
+  bot['verbose']  = bot.verbose or 3
   bot['budget']   = bot.budget or 100
   bot['msg_freq'] = bot.msg_freq or 1
   bot['nInitial'] = bot.nInitial or 2
@@ -177,34 +177,38 @@ function bot:progress_report(t, x, y)
     -------- Print Levels < 1 
     if config.bot.verbose < 1 then return end
 
+    local best = self.best
     local msg = string.format('Trial: %d of %d', t, config.bot.budget)
     utils.ui.printSection(msg)
 
     -------- Print Level 1
-    if config.bot.verbose == 1 then
-      print(string.format('> Best response (#%d):', utils.tensor.number(self.best.t)))
-      print(utils.tensor.string(best_y) ..'\n')
-      print('> Most recent:')
+    if y:nElement() == 1 then
+       print(string.format('> Best response (#%d): %s', best.t, utils.tensor.string(best.y)))
+       print(string.format('> Last response (#%d): %s', t, utils.tensor.string(y)))
+    else
+      print(string.format('> Best response (#%d):', best.t))
+      print(utils.tensor.string(best.y)..'\n')
+      print(string.format('> Last response (#%d):', t))
       print(utils.tensor.string(y))
-      return
     end
 
-    print(string.format('> Responses: %s (best) | %s (prev)', 
-        utils.tensor.string(self.best.y), utils.tensor.string(y)))
-    if config.bot.verbose == 2 then return end
+    if config.bot.verbose == 1 then return end
 
-    -------- Print Levels 3 & 4
-    local msg = '|' ..string.rep(' ', math.ceil((config.bot.name_width-12)/2)) 
-                  .. 'Hyperparameter' .. string.rep(' ', math.floor((config.bot.name_width-12)/2))
-                  .. '| Best Seen |'
+    -------- Print Levels 2 & 3
+    local width = math.max(config.bot.name_width, 18)
+    local msg = '| ' ..string.rep(' ', math.floor((width-14)/2)) 
+                  .. 'Hyperparameter' .. string.rep(' ', math.ceil((width-14)/2))
+                  .. ' | Best Seen |'
 
-    if config.bot.verbose > 3 then msg = msg .. ' Previous' end
+    if config.bot.verbose > 2 then msg = msg .. ' Previous' end
     msg = msg .. ' |'
     print('\n' .. msg .. '\n' .. string.rep('-', msg:len()))
     for idx, hyper in pairs(self.hypers) do
-      msg = hyper.name .. string.rep(' ', config.bot.name_width-hyper.name:len())
-      msg = string.format('%s | %.2e ', msg, hyper:warp(self.best.x[idx]))
-      if config.bot.verbose > 3 then
+      msg = string.rep(' ', math.floor((width-hyper.name:len())/2))
+            .. hyper.name ..
+            string.rep(' ', math.ceil((width-hyper.name:len())/2))
+      msg = string.format('%s | %.2e ', msg, hyper:warp(best.x[idx]))
+      if config.bot.verbose > 2 then
         msg = string.format('%s | %.2e', msg, hyper:warp(x[idx]))
       end
       print('| '..msg .. ' |')

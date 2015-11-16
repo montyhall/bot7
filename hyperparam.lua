@@ -21,7 +21,7 @@ To Do:
   - Better integration of discrete value types
 
 Authored: 2015-10-26 (jwilson)
-Modified: 2015-11-16
+Modified: 2015-11-17
 --]]
 
 ---------------- External Dependencies
@@ -46,8 +46,12 @@ function hyper:__init(key, min, max, typ, size, warping, name)
 
   if not self.name then -- default: last part of key
     local pattern = '.*%.'
-    local _,idx = self.key:find(pattern)
-    self.name = self.key:sub(idx+1, self.key:len())
+    local _, idx  = self.key:find(pattern)
+    if idx then
+      self.name = self.key:sub(idx+1, self.key:len())
+    else
+      self.name = key
+    end
   end
 
   -------- Type Checking
@@ -89,7 +93,7 @@ function hyper:make_warping(f)
       if self.max:gt(10):all() then
         logspace, self.offset = true, torch.Tensor{1}
       end
-    elseif torch.cdiv(self.max, self.min):gt(10):all() and self.min:ge(0):all() then
+    elseif torch.cdiv(self.max, self.min):gt(10):add(self.min:ge(0)):all() then
       logspace, self.offset = true, torch.add(torch.ones(self.min:size()), -self.min)
     end
 

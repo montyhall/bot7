@@ -5,7 +5,7 @@
 User Interface (UI) utility method for bot7.
 
 Authored: 2015-10-30 (jwilson)
-Modified: 2015-11-07
+Modified: 2015-11-16
 --]]
 
 ------------------------------------------------
@@ -69,7 +69,7 @@ end
 function self.printArgs()
   local nArgs = #arg
   if nArgs == 0 then return end
-  self.printSection('Command Line Arguments:', 32)
+  self.printSection('Command Line Arguments')
   local count,k = 0, 0
   while k < nArgs do
     count, k = count+1, k+1

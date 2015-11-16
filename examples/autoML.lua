@@ -36,6 +36,8 @@ cmd:text()
 cmd:text('================================ Options:')
 cmd:option('-verbose',  0, 'specify print level')
 cmd:option('-data',     'examples/data/iris_test30.t7', 'path to target dataset')
+cmd:option('-gpu',      false, 'train neural network using GPU')
+cmd:option('-target',   'loss', "specify target measure for optimization: {'loss', 'err'}")
 cmd:option('-expt',     '', 'path to experiment configuration file')
 cmd:option('-hypers',   '', 'path to hyperparameter specification file')
 cmd:text('================================')
@@ -54,19 +56,20 @@ local data = torch.load(opt.data)
 local expt =
 { 
   verbose = opt.verbose,
-  gpu = false,
-  msg_freq = -1,
+  gpu = opt.gpu,
   yDim = data.yr:max(),
   batchsize = 32
 }
+---- User Interface
+expt.ui = {msg_freq = math.huge} -- don't report progress
 
----- Model architecture
+---- Model Architecture
 expt.model = {nLayers=2, nHidden=100}
 
----- Training schedule
+---- Training Schedule
 expt.schedule = {nEpochs = 100}
 
----- Load expt config file (if provided)
+---- Supplant default expt values (if provided)
 if opt.expt ~= '' then
   utils.table.update(expt, paths.dofile(opt.expt))
 end
@@ -90,11 +93,10 @@ else
     hyperparam('expt.optimizer.weightDecay', 1e-7, 1e-2),
     hyperparam('expt.optimizer.momentum', 0, 1),
     hyperparam('expt.model.dropout', 0, 1),
-    hyperparam('expt.schedule.corruption.degree', 0, 0.5),
   }
 end
 
-targs = {target = 'loss'} -- specify key for target measures
+targs = {target = opt.target} -- specify key for target measures 
 
 ---- Run automator
 autoML(data, expt, hypers, targs)

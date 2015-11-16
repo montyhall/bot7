@@ -6,7 +6,7 @@ Math utility method for bot7.
 
 
 Authored: 2015-10-30 (jwilson)
-Modified: 2015-11-04
+Modified: 2015-11-16
 --]]
 
 ---------------- Constants
@@ -116,6 +116,9 @@ end
 function self.nanop(op, tnsr, axis, res)
   local axis = axis or 0
 
+  ---- Support for CudaTensor's not yet implemented
+  assert(tnsr:type() ~= 'torch.CudaTensor()')
+
   -------- Special Case: Operate over all axis
   if axis == 0 then
     tnsr = tnsr:reshape(tnsr:nElement())
@@ -138,7 +141,6 @@ function self.nanop(op, tnsr, axis, res)
       return res:transpose(axis, nDims)
     end
   end
-
   
   -------- Base case
   local idx = tnsr:eq(tnsr):nonzero()

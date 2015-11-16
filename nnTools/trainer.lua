@@ -17,7 +17,7 @@ Expects data to be passed in as:
   ------------------------------
 
 Authored: 2015-11-04 (jwilson)
-Modified: 2015-11-13
+Modified: 2015-11-16
 --]]
 
 ---------------- External Dependencies
@@ -27,6 +27,7 @@ local math  = require('math')
 local nn    = require('nn')
 local evaluator = require('bot7.nnTools.evaluator')
 local Buffers = require('bot7.nnTools.buffers')
+local timer = require('bot7.nnTools.timer')()
 
 ---------------- Constants
 local defaults = 
@@ -99,7 +100,7 @@ local trainer = function(network, data, config, cache)
 
   -------- Safeguard against bad settings
   if not sched.eval_freq then sched.eval_freq = sched.nEpochs end
-  UI.msg_freq = math.max(UI.msg_freq, sched.eval_freq)
+  --UI.msg_freq = math.max(UI.msg_freq, sched.eval_freq)
   buffers.config.batchsize = math.min(sched.batchsize, buffers.config.fullsize)
 
   -------- Detect Problem Type (Classif. / Regression)
@@ -120,9 +121,11 @@ local trainer = function(network, data, config, cache)
         if count > 0 then nSets = nSets + 1 end
       end
       ---- last column in trace stores epoch
-      trace = {loss = torch.Tensor(nEvals, nSets+1):fill(0/0)}
+      trace = {loss = torch.zeros(nEvals, nSets+1)}
+      trace.loss:narrow(2, 1, nSets):fill(0/0)
       if flags.classif then
-        trace.err = torch.Tensor(nEvals, nSets+1):fill(0/0)
+        trace.err = torch.zeros(nEvals, nSets+1)
+        trace.err:narrow(2, 1, nSets):fill(0/0)
       end
     end
   end
@@ -149,6 +152,7 @@ local trainer = function(network, data, config, cache)
 
   -------- Parameter updates (single epoch)
   local update = function(suffix)
+    timer:start('update')
     local suffix = suffix or 'r'
     local perm = torch.randperm(counts[suffix], 'torch.LongTensor')
     local tail, size  = 0, 0
@@ -175,10 +179,12 @@ local trainer = function(network, data, config, cache)
         buffers:increment({'x','y'})
       end
     end
+    timer:stop('update')
   end
 
   -------- Wrapper for evaluator
   local eval = function(suffix)
+    timer:start('eval')
     if criterion.evaluate then criterion:evaluate() end
     local temp = buffers.config.batchsize
     local loss, err = evaluator(network, criterion, data['x'..suffix],
@@ -187,6 +193,7 @@ local trainer = function(network, data, config, cache)
     -- Reset batchsize (eval might use different batchsize)
     buffers.config.batchsize = temp
     buffers:index_reset() -- reset all indices to 1 (as a precaution)
+    timer:stop('eval')
     return loss, err
   end
 
@@ -197,47 +204,46 @@ local trainer = function(network, data, config, cache)
       local msg = string.format('Epoch: %d of %d', epoch, sched.nEpochs)
       utils.ui.printSection(msg)
 
-      local loss = trace.loss
-      local nCol = loss:size(2)
-      local prev = utils.math.nanop(torch.max, loss[{{}, nCol}])
-      local idx  = loss:select(2, nCol):eq(prev):repeatTensor(nCol, 1):t()
-      local loss = loss:maskedSelect(idx)
-      local err  = nil
-      if trace.err then 
-        err = trace.err:maskedSelect(idx)
-      end
-      idx, msg = 1, ''
-      for k = 1, nSets do
-        if counts[suffix[k]] then 
-          if msg ~= '' then msg = msg .. ' | ' end
-          msg = msg .. string.format('%.2e (%s)', loss[idx], suffix[k]:upper())
-          idx = idx + 1
-        end
+      ---- Runtime tracking 
+      local eta = timer:predict(sched.nEpochs - epoch, 'epoch')
+      msg = string.format('> Runtime: %.2es (ETA) | %.2es per epoch',
+                          eta, timer.memory.epoch.cma)
+      print(msg)
+
+      ---- Learning rate
+      local nEvals = state.evalCounter or 0
+      local lRate  = config.optimizer.learningRate/(1 + nEvals*config.optimizer.learningRateDecay)
+      print(string.format('> Learning Rate: %.2E (after %d updates)',lRate, nEvals))
+
+      ---- Performance measures
+      local env  = {Loss= trace.loss, Error=trace.err}
+      local nCol = env.Loss:size(2)
+      local prev, idx = env.Loss:select(2, nCol):max(1)
+      prev, idx = prev[1], idx[1]
+      if prev > 0 then
+        env.Loss = env.Loss:select(1, idx)
+        if env.Error then env.Error = env.Error:select(1, idx) end
+      else
+        env.Loss, env.Error = nil, nil
       end
 
-      if err then
-        print(string.format('> Loss  at epoch %d: %s', prev, msg))
+      for key, field in pairs(env) do
         idx, msg = 1, ''
-        for k = 1, nSets do
+        for k = 1, nCol-1 do
           if counts[suffix[k]] then 
             if msg ~= '' then msg = msg .. ' | ' end
-            msg = msg .. string.format('%.2e (%s)', err[idx], suffix[k]:upper())
+            msg = msg .. string.format('%.2e (%s)', env[key][idx], suffix[k]:upper())
             idx = idx + 1
           end
         end
-        print(string.format('> Error at epoch %d: %s', prev, msg))
-      else
-        print(string.format('> Loss at epoch %d: %s', prev, msg))
+        print(string.format('> %s at epoch %d: %s', key, prev, msg))
       end
-
-      local nEvals = state.evalCounter or 0
-      local lRate  = config.optimizer.learningRate/(1 + nEvals*config.optimizer.learningRateDecay)
-      print(string.format('> Learning Rate: %.2E',lRate))
     end
   end
 
   -------- Main Training Loop
   for epoch = 1, sched.nEpochs do
+    timer:start('epoch')
     ---- Perform parameter update
     update('r')
 
@@ -261,6 +267,7 @@ local trainer = function(network, data, config, cache)
     end
 
     ---- Report current status to user
+    timer:stop('epoch')
     report(epoch)
   end
   return trace

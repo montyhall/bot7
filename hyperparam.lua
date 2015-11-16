@@ -21,7 +21,7 @@ To Do:
   - Better integration of discrete value types
 
 Authored: 2015-10-26 (jwilson)
-Modified: 2015-11-02
+Modified: 2015-11-16
 --]]
 
 ---------------- External Dependencies
@@ -33,7 +33,7 @@ local utils = require('bot7.utils')
 local title = 'bot7.hyperparam'
 local hyper = torch.class(title)
 
-function hyper:__init(key, min, max, typ, size, warping)
+function hyper:__init(key, min, max, typ, size, warping, name)
   -------- Required fields
   self.key = key
 
@@ -41,7 +41,14 @@ function hyper:__init(key, min, max, typ, size, warping)
   self.min  = min or 0
   self.max  = max or 1
   self.type = typ or 'float'
-  self.size = size or 1
+  self.size = 1 --size or 1 (to do)
+  self.name = name -- shorthand name
+
+  if not self.name then -- default: last part of key
+    local pattern = '.*%.'
+    local _,idx = self.key:find(pattern)
+    self.name = self.key:sub(idx+1, self.key:len())
+  end
 
   -------- Type Checking
   assert(self.type == 'float' or self.type == 'int')
@@ -77,20 +84,20 @@ function hyper:make_warping(f)
   -- Temp assumption: self.size == 1
   elseif f == 'default' then
     local logspace = false
-    local wmin, wmax = nil, nil
 
     if self.min:eq(0):all() then
       if self.max:gt(10):all() then
         logspace, self.offset = true, torch.Tensor{1}
       end
-    elseif torch.cdiv(self.max, self.min):gt(10):all() then
-      -- logspace, self.offset = true, torch.zeros(self.size)
+    elseif torch.cdiv(self.max, self.min):gt(10):all() and self.min:ge(0):all() then
       logspace, self.offset = true, torch.add(torch.ones(self.min:size()), -self.min)
     end
 
     if logspace then
       self.wmin = torch.log(torch.add(self.min, self.offset)) 
       self.wmax = torch.log(torch.add(self.max, self.offset))
+      self.min:fill(0) -- set to 0, post-warping equals origin min
+      self.max:fill(1) -- set to 1, post-warping equals origin max
 
       function self:warp(x)
         if torch.isTensor(x) then

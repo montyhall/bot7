@@ -5,7 +5,7 @@
 Abstact base class for bot7 bots.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-11-04
+Modified: 2015-11-16
 --]]
 
 ---------------- External Dependencies
@@ -18,9 +18,10 @@ local Grids = require('bot7.grids')
 local title = 'bot7.bots.abstract'
 local bot   = torch.class(title)
 
-function bot:__init(config, objective, cache)
+function bot:__init(objective, hypers, config, cache)
   -------- Establish settings
   local cache    = cache or {}
+  self.hypers    = cache.hypers or hypers
   self.objective = cache.objective or objective
   self.config    = self:configure(cache.config or config)
   local config   = self.config
@@ -38,7 +39,7 @@ function bot:__init(config, objective, cache)
 
   -------- Preallocate result struct
   self.best      = {}
-  self.best['x'] = torch.Tensor(1, config.xDim)
+  self.best['x'] = torch.Tensor(1, config.grid.dims)
   if self.responses then 
     self.best['y'], self.best['t'] = self.responses:min(1)
   else
@@ -49,12 +50,12 @@ end
 
 function bot:configure(config)
   local config = utils.table.deepcopy(config)
-  assert(config.xDim) -- must be provided
+  -- assert(config.xDim) -- must be provided
 
   ---------------- Default Settings
   -------- Bot
   local bot       = config.bot or {}
-  bot['verbose']  = bot.verbose or 3
+  bot['verbose']  = bot.verbose or 4
   bot['budget']   = bot.budget or 100
   bot['msg_freq'] = bot.msg_freq or 1
   bot['nInitial'] = bot.nInitial or 2
@@ -66,13 +67,37 @@ function bot:configure(config)
   score['type']      = score.type or 'expected_improvement'
   config['score']    = score
 
+
   -------- Grid
-  local grid     = config.grid or {}
-  grid['type']   = grid.type or 'random'
-  grid['size']   = grid.size or 2e4
-  grid['dims']   = grid.dims or config.xDim
-  grid['mins']   = grid.mins or torch.zeros(1, grid.dims)
-  grid['maxes']  = grid.maxes or torch.ones(1, grid.dims)
+  local grid, idx = config.grid or {}, 0
+  grid['type'] = grid.type or 'random'
+  grid['size'] = grid.size or 2e4
+
+  bot.name_width = 0
+  if not grid.dims then
+    grid.dims = 0
+    for key, hyper in pairs(self.hypers) do
+      grid.dims = grid.dims + hyper.size
+      bot.name_width = math.max(bot.name_width, hyper.name:len())
+    end
+  end
+
+  if not grid.mins then
+    grid.mins, idx = torch.zeros(1, grid.dims), 1
+    for key, hyper in pairs(self.hypers) do
+      grid.mins:narrow(2, idx, hyper.size):copy(hyper.min)
+      idx = idx + hyper.size
+    end
+  end
+
+  if not grid.maxes then
+    grid.maxes, idx = torch.zeros(1, grid.dims), 1
+    for key, hyper in pairs(self.hypers) do
+      grid.maxes:narrow(2, idx, hyper.size):copy(hyper.max)
+      idx = idx + hyper.size
+    end
+  end
+
   config['grid'] = grid
 
   return config
@@ -164,17 +189,26 @@ function bot:progress_report(t, x, y)
       return
     end
 
-    -------- Print Levels 2
-    print(string.format('> Best seen (#%d):', utils.tensor.number(self.best.t)))
-    print('Response:\n' .. utils.tensor.string(self.best.y) .. '\n')
-    print('Hypers:\n' .. utils.tensor.string(self.best.x))
-
-    print('\n> Most recent:')
-    print('Response:\n' .. utils.tensor.string(y) .. '\n')
+    print(string.format('> Responses: %s (best) | %s (prev)', 
+        utils.tensor.string(self.best.y), utils.tensor.string(y)))
     if config.bot.verbose == 2 then return end
 
-    -------- Print Level 3
-    print('Hypers:\n' .. utils.tensor.string(x))
+    -------- Print Levels 3 & 4
+    local msg = '|' ..string.rep(' ', math.ceil((config.bot.name_width-12)/2)) 
+                  .. 'Hyperparameter' .. string.rep(' ', math.floor((config.bot.name_width-12)/2))
+                  .. '| Best Seen |'
+
+    if config.bot.verbose > 3 then msg = msg .. ' Previous' end
+    msg = msg .. ' |'
+    print('\n' .. msg .. '\n' .. string.rep('-', msg:len()))
+    for idx, hyper in pairs(self.hypers) do
+      msg = hyper.name .. string.rep(' ', config.bot.name_width-hyper.name:len())
+      msg = string.format('%s | %.2e ', msg, hyper:warp(self.best.x[idx]))
+      if config.bot.verbose > 3 then
+        msg = string.format('%s | %.2e', msg, hyper:warp(x[idx]))
+      end
+      print('| '..msg .. ' |')
+    end
   end
 end
 

@@ -111,7 +111,7 @@ local automator = function(data, expt, hypers, targs)
         key   = key:sub(idx+1, key:len())
         idx   = string.find(key, '%.')
       end
-      stack[key] = hypers[k]:warp(vals[k])
+      stack[key] = hypers[k]:warp(vals[k]) -- apply warping
     end
 
     -------- Build & Train Neural Network
@@ -120,7 +120,7 @@ local automator = function(data, expt, hypers, targs)
     return aux.extract(response, targs.target)
   end
 
-  local bot = targs.bot or bots[expt.bot.type](expt, wrapper)
+  local bot = targs.bot or bots[expt.bot.type](wrapper, hypers, expt)
   return bot:run_experiment()
 end
 

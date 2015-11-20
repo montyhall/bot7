@@ -6,7 +6,7 @@ Math utility method for bot7.
 
 
 Authored: 2015-10-30 (jwilson)
-Modified: 2015-11-16
+Modified: 2015-11-20
 --]]
 
 ---------------- Constants
@@ -258,73 +258,105 @@ end
 --------------------------------
 --      Error Function (Approx.)
 --------------------------------
-function self.erf(x)
+function self.erf(src, res, buffer)
    -------- Constants
   local c1, c2 = 0.254829592, -0.284496736
   local c3, c4 = 1.421413741, -1.453152027
   local c5, p  = 1.061405429,  0.3275911
 
   -------- Argument Parsing
-  if not torch.isTensor(x) then
-    local t = type(x)
+  if not torch.isTensor(src) then
+    local t = type(src)
     if t == 'table' then
-      x = torch.Tensor(x)
+      src = torch.Tensor(src)
     elseif t == 'number' then
-      x = torch.Tensor{x}
+      src = torch.Tensor{src}
     end
   end
+  local res    = res or torch.Tensor()
+  local buffer = buffer or torch.Tensor()
 
-  -------- Error Function
-  local sign = x:ge(0.0):type(x:type()):mul(2):add(-1)
-  local x    = torch.abs(x)
-  local t    = x:clone():mul(p):add(1):pow(-1)
-  local erf  = t:clone():mul(c5):add(c4):cmul(t):add(c3)
-                :cmul(t):add(c2):cmul(t):add(c1):cmul(t)
-                :cmul(x:pow(2):mul(-1.0):exp())
-                :mul(-1):add(1):cmul(sign)
-  return erf
+  -------- Error Function (We reuse buffer to avod excess allocation)
+  buffer:resizeAs(src):abs(src):mul(p):add(1):pow(-1)
+  res:resizeAs(buffer):mul(buffer, c5):add(c4):cmul(buffer):add(c3)
+     :cmul(buffer):add(c2):cmul(buffer):add(c1):cmul(buffer)
+  buffer:pow(src, 2):mul(-1.0):exp()
+  res:cmul(buffer):mul(-1):add(1)
+  buffer:ge(src, 0.0):mul(2):add(-1)
+  res:cmul(buffer)
+  return res
 end
 
 --------------------------------
 --           Standard Normal PDF
 --------------------------------
-function self.norm_pdf(x)
-  return torch.exp(torch.pow(x, 2):mul(-0.5)):mul(sqrt2pi_inv)
+function self.norm_pdf(src, res)
+  if torch.isTensor(res) then
+    res:pow(src, 2):mul(-0.5):exp():mul(sqrt2pi_inv)
+    return res
+  else
+    return torch.pow(src, 2):mul(-0.5):exp():mul(sqrt2pi_inv)
+  end
 end
 
 --------------------------------
 --           Standard Normal CDF
 --------------------------------
-function self.norm_cdf(x)
-  return self.erf(torch.mul(x, sqrt2_inv)):add(1):mul(0.5)
+function self.norm_cdf(src, res, buffer, buffer_erf)
+  local res    = res or torch.Tensor()
+  local buffer = buffer or torch.Tensor()
+  buffer:resizeAs(src):mul(src, sqrt2_inv)
+  self.erf(buffer, res, buffer_erf)
+  res:add(1):mul(0.5)
+  return res
 end
 
 --------------------------------
 --       Standard Normal Log-PDF
 --------------------------------
-function self.norm_logpdf(x)
-  return torch.pow(x, 2):add(log2pi):mul(-0.5)
+function self.norm_logpdf(src, res)
+  if torch.isTensor(res) then
+    res:resizeAs(src):pow(src, 2):add(log2pi):mul(-0.5)
+    return res
+  else
+    return torch.pow(src, 2):add(log2pi):mul(-0.5)
+  end
 end
 
 --------------------------------
 --                Log-Normal PDF
 --------------------------------
-function self.lognorm_pdf(x)
-  return torch.exp(torch.log(x):pow(2):mul(-0.5)):cdiv(x):mul(sqrt2pi_inv)
+function self.lognorm_pdf(src, res)
+  if torch.isTensor(res) then
+    res:resizeAs(src):log(src):pow(2):mul(-0.5):cdiv(src):mul(sqrt2pi_inv)
+    return res
+  else
+    return torch.log(src):pow(2):mul(-0.5):exp():cdiv(src):mul(sqrt2pi_inv)
+  end
 end
 
 --------------------------------
 --                Log-Normal CDF
 --------------------------------
-function self.lognorm_cdf(x)
-  return self.erf(torch.log(x):mul(sqrt2_inv)):mul(0.5):add(0.5)
+function self.lognorm_cdf(src, res, buffer, buffer_erf)
+  local res    = res or torch.Tensor()
+  local buffer = buffer or torch.Tensor()
+
+  buffer:resizeAs(src):log(src):mul(sqrt2_inv)
+  self.erf(buffer, res, buffer_erf)
+  res:mul(0.5):add(0.5)
+  return res
 end
 
 --------------------------------
 --            Log-Normal Log-PDF
 --------------------------------
-function self.lognorm_logpdf(x)
-  return torch.log(x):pow(2):mul(-0.5):add(-torch.mul(x, sqrt2pi):log())
+function self.lognorm_logpdf(src, res)
+  if torch.isTensor(res) then
+    res:log(src):pow(2):mul(-0.5):add(-torch.mul(src, sqrt2pi):log())
+  else
+    return torch.log(src):pow(2):mul(-0.5):add(-torch.mul(src, sqrt2pi):log())
+  end
 end
 
 return self

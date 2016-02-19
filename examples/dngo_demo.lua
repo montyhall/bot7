@@ -10,7 +10,7 @@ Neural Networks" (Snoek et. al 2015)
 
 
 Authored: 2015-09-30 (jwilson)
-Modified: 2015-11-17
+Modified: 2016-02-24
 --]]
 
 ---------------- External Dependencies
@@ -42,7 +42,7 @@ cmd:option('-yDim',      1,   'specify output dimensionality for experiment')
 cmd:option('-noisy',     true, 'specify observations as noisy')
 cmd:option('-batchsize', 32, 'specify batchsize for DNGO network')
 cmd:option('-grid_size', 20000, 'specify size of candidate grid')
-cmd:option('-grid_type', 'random', 'specify type of grid to employ')
+cmd:option('-grid_type', 'sobol', 'specify type of grid to employ')
 cmd:option('-mins', '',  'specify minima for inputs (defaults to 0.0)')
 cmd:option('-maxes',     '', 'specify maxima for inputs (defaults to 1.0)')
 cmd:option('-score',      'ei', 'specify acquisition function to be used by bot; {ei, ucb}')

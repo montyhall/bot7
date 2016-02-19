@@ -17,7 +17,7 @@ Expects data to be passed in as:
   ------------------------------
 
 Authored: 2015-11-04 (jwilson)
-Modified: 2015-11-17
+Modified: 2015-11-30
 --]]
 
 ---------------- External Dependencies
@@ -152,12 +152,15 @@ local trainer = function(network, data, config, cache)
   -------- Parameter updates (single epoch)
   local update = function(suffix)
     timer:start('update')
-    local suffix = suffix or 'r'
-    local perm = torch.randperm(counts[suffix], 'torch.LongTensor')
-    local tail, size  = 0, 0
-    local buffer_size = buffers.config.fullsize
-    local batchsize   = buffers.config.batchsize
-    local nBatches    = 0
+    local suffix  = suffix or 'r' 
+    local indices = torch.randperm(counts[suffix], 'torch.LongTensor')
+                          :split(buffers.config.fullsize)
+    local nBatch  = utils.table.size(indices)
+    local nMini   = -1
+
+    ---- Set modules to 'training' mode
+    if network.training   then network:training()   end
+    if criterion.training then criterion:training() end
 
     ---- Establish which buffers need to be updated/incremented
     local keys = {'x'..suffix, 'y'..suffix}
@@ -167,17 +170,10 @@ local trainer = function(network, data, config, cache)
       table.insert(keys, 'ys') -- cached outputs from surrogate
     end
 
-    ---- Set modules to 'training' mode
-    if network.training   then network:training()   end
-    if criterion.training then criterion:training() end
-
-    for head = 1, counts[suffix], buffer_size do -- iterate over databatches
-      tail     = math.min(head+buffer_size-1, counts[suffix])
-      nBatches = math.ceil((tail-head+1)/batchsize)
-      idx      = perm:sub(head, tail)
-      buffers:update(data, idx, keys) -- load next databatch
-
-      for batch = 1, nBatches do -- iterate over minibatches
+    for batch = 1, nBatch do -- iterate over databatches
+      buffers:update(data, indices[batch], keys) -- load next databatch
+      nMini = math.ceil(indices[batch]:size(1)/buffers.config.batchsize)
+      for mini = 1, nMini do -- iterate over minibatches
         ---- Compute surrogate model's prediction
         if surrogate then
           if buffers:has_key('xs') then

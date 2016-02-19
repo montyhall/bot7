@@ -5,7 +5,7 @@
 Abstract base class for bot7 grids.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-10-11
+Modified: 2016-02-24
 --]]
 
 ------------------------------------------------
@@ -19,7 +19,7 @@ end
 
 function grid:__call__(config)
   local config = config or self.config
-  return self.generate(config)
+  return self:generate(config)
 end
 
 function grid.generate(config)

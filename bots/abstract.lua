@@ -5,7 +5,7 @@
 Abstact base class for bot7 bots.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-11-17
+Modified: 2016-02-24
 --]]
 
 ---------------- External Dependencies
@@ -27,8 +27,13 @@ function bot:__init(objective, hypers, config, cache)
   local config   = self.config
 
   -------- Generate Candidate Grid
-  local grid      = Grids[config.grid.type]()
-  self.candidates = cache.candidates or grid(config.grid)
+  self.candidates = cache.candidates
+  if not self.candidates then
+    if (config.bot.verbose > 1) then
+      print('> Generating candidate grid...')
+    end
+    self.candidates = Grids[config.grid.type](config.grid)()
+  end
   self.responses  = cache.responses or nil
   self.observed   = cache.observed or nil
   if self.observed then
@@ -63,14 +68,15 @@ function bot:configure(config)
   bot['save']     = bot.save or false
   config['bot']   = bot
 
-  local score        = config.score or {}
-  score['type']      = score.type or 'expected_improvement'
-  config['score']    = score
+  -------- Acquisition Function
+  local score     = config.score or {}
+  score['type']   = score.type or 'expected_improvement'
+  config['score'] = score
 
 
   -------- Grid
   local grid, idx = config.grid or {}, 0
-  grid['type'] = grid.type or 'random'
+  grid['type'] = grid.type or 'sobol'
   grid['size'] = grid.size or 2e4
 
   bot.name_width = 0
@@ -97,7 +103,6 @@ function bot:configure(config)
       idx = idx + hyper.size
     end
   end
-
   config['grid'] = grid
 
   return config

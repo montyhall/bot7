@@ -10,7 +10,7 @@ The (optional) 'tradeoff' parameter helps govern
 the balance between exploration and exploitation.
 
 Authored: 2015-09-16 (jwilson)
-Modified: 2015-11-04
+Modified: 2016-01-12
 --]]
 
 ---------------- External Dependencies
@@ -41,7 +41,9 @@ function EI:__call__(model, hyp, X_obs, Y_obs, X_hid, X_pend, config)
 end
 
 function EI.eval(model, hyp, X_obs, Y_obs, X_hid, X_pend, config)
+  local X_obs, Y_obs, Y_pend = X_obs, Y_obs
   local nObs, nHid = X_obs:size(1), X_hid:size(1)
+
   if (X_obs:dim() == 1) then X_obs:resize(1, nObs); nObs=1 end
   if (X_hid:dim() == 1) then X_hid:resize(1, nHid); nHid=1 end
 
@@ -52,7 +54,6 @@ function EI.eval(model, hyp, X_obs, Y_obs, X_hid, X_pend, config)
     local nOP   = nObs + nPend
 
     -------- Generate fantasies and append to _obs tensors
-    local X_obs, Y_obs, Y_pend = X_obs, Y_obs, nil
     Y_pend = model:fantasize(config.nFantasies, X_obs, Y_obs, X_pend, hyp)
     X_obs  = X_obs:cat(X_pend, 1)
     Y_obs  = utils.tensor.vect(Y_obs):repeatTensor(1, config.nFantasies):cat(Y_pend, 1)

@@ -5,7 +5,7 @@
 Tensor utility method for bot7.
 
 Authored: 2015-10-30 (jwilson)
-Modified: 2015-11-07
+Modified: 2016-02-19
 --]]
 
 ------------------------------------------------

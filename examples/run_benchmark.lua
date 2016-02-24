@@ -5,7 +5,7 @@
 Bayesian Optimization of benchmarking functions.
 
 Authored: 2015-09-18 (jwilson)
-Modified: 2015-11-17
+Modified: 2016-02-24
 --]]
 
 ---------------- External Dependencies
@@ -33,7 +33,7 @@ cmd:option('-xDim',       100,'specify input dimensionality for experiment')
 cmd:option('-yDim',       1,'specify output dimensionality for experiment')
 cmd:option('-noisy',      false, 'specify observations as noisy')
 cmd:option('-grid_size',  20000, 'specify size of candidate grid')
-cmd:option('-grid_type',  'random', 'specify type for candidate grid')
+cmd:option('-grid_type',  'sobol', 'specify type for candidate grid')
 cmd:option('-mins', '',   'specify minima for inputs (defaults to 0.0)')
 cmd:option('-maxes',      '', 'specify maxima for inputs (defaults to 1.0)')
 cmd:option('-score',      'ei', 'specify acquisition function to be used by bot; {ei, ucb}')

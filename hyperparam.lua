@@ -21,7 +21,7 @@ To Do:
   - Better integration of discrete value types
 
 Authored: 2015-10-26 (jwilson)
-Modified: 2015-11-17
+Modified: 2016-03-17
 --]]
 
 ---------------- External Dependencies
@@ -118,4 +118,4 @@ function hyper:make_warping(f)
   end
 end
 
-return hyper
+return bot7.hyperparam

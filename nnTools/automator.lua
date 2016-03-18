@@ -36,7 +36,7 @@ Expects data to be passed in as:
   ------------------------------
 
 Authored: 2015-10-15 (jwilson)
-Modified: 2015-11-16
+Modified: 2016-03-18
 --]]
 
 ---------------- External Dependencies
@@ -92,7 +92,16 @@ local automator = function(data, expt, hypers, targs)
         if vals[key] then return aux.extract(vals[key]) end
       end
     end
-    return utils.tensor.number(vals, 1)
+
+    ---- Extract test/validation measure
+    local axis = math.min(2, vals:dim())
+    local idx  = 1 -- test measure
+    if vals:size(axis) == 4 then
+      idx = 3 -- use validation if available
+    end
+    local shape = vals:size()
+    shape[axis] = idx
+    return vals[shape]
   end
     
 

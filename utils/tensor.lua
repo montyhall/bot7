@@ -5,7 +5,7 @@
 Tensor utility method for bot7.
 
 Authored: 2015-10-30 (jwilson)
-Modified: 2016-02-19
+Modified: 2016-03-19
 --]]
 
 ------------------------------------------------
@@ -230,21 +230,21 @@ end
 function self.linear_index(shape, coords, order)
   local nDim   = shape:nElement()
   local order  = order or 'C'
-
   local coords = coords
+  local offset = nil
   if (coords:dim() == 1) then
-    coords = coords:reshape(coords:nElement(), 1)
+    coords = coords:reshape(1, coords:nElement())
   end
-
-  local offset
   if order == 'C' then
     offset = self.flip(torch.cat(torch.ones(1, 'torch.LongTensor'),
-                        self.flip(shape, 1, 2):cumprod(), 1))
+               self.flip(shape:sub(1, nDim-1), 1):cumprod(), 1))
   elseif order == 'F' then
-    offset = torch.cat(torch.ones(1, 'torch.LongTensor'), shape:sub(1, nDim-1), 1):cumprod()
+    offset = torch.cat(torch.ones(1, 'torch.LongTensor'),
+      shape:sub(1, nDim-1), 1):cumprod()
   end
   return torch.mv(coords - 1, offset):add(1)
 end
+
 
 --------------------------------
 --   Linear indices of mat diag

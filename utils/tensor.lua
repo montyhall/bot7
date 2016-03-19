@@ -233,7 +233,11 @@ function self.linear_index(shape, coords, order)
   local coords = coords
   local offset = nil
   if (coords:dim() == 1) then
-    coords = coords:reshape(1, coords:nElement())
+    if shape[1] == _.prod(shape) then -- 1d data in a 2d tensor
+      coords = coords:reshape(coords:nElement(), 1)
+    else
+      coords = coords:reshape(1, coords:nElement())
+    end
   end
   if order == 'C' then
     offset = self.flip(torch.cat(torch.ones(1, 'torch.LongTensor'),
